@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
-"""Rebuild data/names.json and index.html from the raw VLKK dataset.
+"""Rebuild names.json and index.html from the raw VLKK dataset.
 
 Usage:
-    python build/build.py path/to/vardai.jsonl
+    python build.py path/to/vardai.jsonl   rebuild the dataset, then the page
+    python build.py                        rebuild only the page from names.json
+    python build.py --check                verify index.html matches template.html
 
 The raw file is the newline-delimited JSON export of "Vardų lingvistiniai
 duomenys" (dataset 2664) from https://data.gov.lt — one JSON object per
-registered name entry. It is not committed here; download it yourself.
+registered name entry. It is not committed here; download it yourself. Editing
+template.html needs no raw data: run the script with no argument to re-inline
+the committed names.json into index.html.
 
 Output:
-    data/names.json   compact dataset (one row per distinct given name)
-    index.html        self-contained page with that dataset inlined
+    names.json   compact dataset (one row per distinct given name)
+    index.html   self-contained page with that dataset inlined
 """
 import collections
 import json
@@ -18,7 +22,7 @@ import pathlib
 import sys
 import unicodedata
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent
+ROOT = pathlib.Path(__file__).resolve().parent
 GENDER = {"Moteris": 1, "Vyras": 2}
 VERDICT = {"Teiktinas": 1, "Vengtinas": 2, "Neteiktinas": 3}
 GROUP = {"Baltiška kilmė": 1, "Svetima kilmė": 2}
@@ -99,22 +103,43 @@ def build_rows(singles, tokens, combo_gender):
     return {"pogr": subgroups, "posk": subsections, "rows": rows}
 
 
+def render(payload, count):
+    """Inline the dataset into template.html and return the finished page."""
+    template = (ROOT / "template.html").read_text(encoding="utf-8")
+    page = template.replace("of 8,954 names", f"of {count:,} names")
+    return page.replace("/*__DATA__*/", payload.replace("</", "<\\/"))
+
+
+def emit(payload, count):
+    (ROOT / "index.html").write_text(render(payload, count), encoding="utf-8")
+
+
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) > 2:
         sys.exit(__doc__)
 
-    dataset = build_rows(*load(sys.argv[1]))
-    payload = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
-    count = len(dataset["rows"])
+    names_json = ROOT / "names.json"
+    if len(sys.argv) == 2 and sys.argv[1] == "--check":
+        payload = names_json.read_text(encoding="utf-8")
+        count = len(json.loads(payload)["rows"])
+        if render(payload, count) != (ROOT / "index.html").read_text(encoding="utf-8"):
+            sys.exit("index.html is stale — run: python build.py")
+        print("index.html matches template.html")
+        return
 
-    (ROOT / "data" / "names.json").write_text(payload, encoding="utf-8")
+    if len(sys.argv) == 2:
+        dataset = build_rows(*load(sys.argv[1]))
+        payload = json.dumps(dataset, ensure_ascii=False, separators=(",", ":"))
+        names_json.write_text(payload, encoding="utf-8")
+        count = len(dataset["rows"])
+        emit(payload, count)
+        print(f"{count:,} names -> names.json, index.html")
+        return
 
-    template = (ROOT / "build" / "template.html").read_text(encoding="utf-8")
-    page = template.replace("of 8,954 names", f"of {count:,} names")
-    page = page.replace("/*__DATA__*/", payload.replace("</", "<\\/"))
-    (ROOT / "index.html").write_text(page, encoding="utf-8")
-
-    print(f"{count:,} names -> data/names.json, index.html")
+    payload = names_json.read_text(encoding="utf-8")
+    count = len(json.loads(payload)["rows"])
+    emit(payload, count)
+    print(f"{count:,} names -> index.html")
 
 
 if __name__ == "__main__":
