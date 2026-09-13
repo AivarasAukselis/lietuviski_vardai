@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Filter 8,954 Lithuanian given names by syllable count, permitted letters and register metadata.">
+<title>Lithuanian name filter — VLKK register</title>
+<style>
+:root{
+  --paper:#E6E9E6; --card:#FCFDFC; --ink:#16202B; --muted:#5F6C78;
+  --rule:#C7CEC9; --yes:#1F6A52; --no:#7A3352; --focus:#2F6F5E;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+header.bar{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);
+  padding:10px 16px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+header.bar h1{font-family:var(--serif);font-weight:600;font-size:19px;margin:0;letter-spacing:.1px}
+.count{font-family:var(--serif);font-size:17px;margin-left:auto}
+.count b{font-weight:600}
+.count span{color:var(--muted);font-family:var(--sans);font-size:13px}
+.reset{background:none;border:1px solid var(--rule);border-radius:999px;padding:3px 11px;font-size:13px;color:var(--muted);cursor:pointer}
+.reset:hover{color:var(--ink);border-color:var(--ink)}
+
+.wrap{max-width:1180px;margin:0 auto;padding:16px}
+@media(min-width:940px){
+  .wrap{display:grid;grid-template-columns:400px 1fr;gap:28px;align-items:start;padding:22px}
+  .panel{position:sticky;top:56px;max-height:calc(100vh - 76px);overflow-y:auto;padding-right:6px}
+}
+
+section{margin:0 0 18px}
+h2{font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 8px;letter-spacing:.3px}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+
+/* letters */
+.lgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+@media(min-width:520px){.lgrid{grid-template-columns:repeat(9,1fr)}}
+.tile{background:var(--card);border:1px solid var(--rule);border-radius:7px;padding:5px 2px 4px;text-align:center;cursor:pointer;-webkit-user-select:none;user-select:none}
+.tile .g{font-family:var(--serif);font-size:20px;line-height:1.1;display:block}
+.tile .c{font-size:9.5px;color:var(--muted);display:block}
+.tile[data-s="1"]{border-color:var(--yes);background:#E7F0EC;color:var(--yes)}
+.tile[data-s="2"]{border-color:var(--no);background:#F3E8ED;color:var(--no)}
+.tile[data-s="1"] .c,.tile[data-s="2"] .c{color:inherit;opacity:.65}
+.tile[data-z="1"] .g{opacity:.35}
+.rules{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.rule{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--card);
+  border:1px solid var(--rule);border-left:3px solid var(--rule);border-radius:6px;padding:4px 7px}
+.rule.req{border-left-color:var(--yes)}
+.rule.exc{border-left-color:var(--no)}
+.rule .l{font-family:var(--serif);font-size:18px;min-width:15px}
+.rule .w{color:var(--muted)}
+.rule .sp{margin-left:auto}
+.rule label{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--no);cursor:pointer}
+.rule label input{margin:0;width:13px;height:13px;accent-color:var(--no)}
+.rule .x{background:none;border:0;color:var(--muted);font-size:17px;line-height:1;cursor:pointer;padding:0 3px}
+.rule .x:hover{color:var(--ink)}
+.quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.quick button{background:none;border:1px dashed var(--rule);border-radius:6px;padding:4px 9px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.quick button:hover{color:var(--ink);border-color:var(--ink);border-style:solid}
+
+/* selection */
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden;background:var(--card)}
+.seg button{background:none;border:0;padding:5px 13px;font-size:13px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.pick{flex:none;width:19px;height:19px;border-radius:50%;border:1.5px solid var(--rule);background:var(--card);
+  cursor:pointer;padding:0;position:relative;align-self:center}
+li[data-on="1"] .pick{background:var(--yes);border-color:var(--yes)}
+li[data-on="1"] .pick::after{content:"";position:absolute;left:5px;top:2.5px;width:5px;height:9px;
+  border:solid var(--card);border-width:0 1.6px 1.6px 0;transform:rotate(42deg)}
+li[data-on="1"] .name{color:var(--yes)}
+.savenote{font-size:12px;color:var(--muted);margin:10px 0 0}
+
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row label{font-size:13px;color:var(--muted)}
+select,input[type=text],input[type=number]{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:6px 8px}
+input[type=text]{width:100%}
+input[type=number]{width:62px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.toggle{display:flex;gap:7px;align-items:flex-start;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px}
+.toggle input{margin:2px 0 0;accent-color:var(--focus)}
+.origins{max-height:168px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:6px 9px}
+.origins label{display:flex;gap:7px;align-items:baseline;font-size:13px;padding:2px 0;color:var(--ink);cursor:pointer}
+.origins input{accent-color:var(--focus);margin:0}
+.origins .n{color:var(--muted);font-size:11.5px;margin-left:auto}
+
+/* results */
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.tools .sp{margin-left:auto}
+.act{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer}
+.act:hover{border-color:var(--ink)}
+ul.res{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
+ul.res li{display:flex;align-items:baseline;gap:10px;padding:7px 2px;border-bottom:1px solid var(--rule)}
+.name{font-family:var(--serif);font-size:20px}
+.syl{font-size:11.5px;color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:0 5px;flex:none}
+.meta{font-size:12px;color:var(--muted);margin-left:auto;text-align:right;flex:none}
+.meta .w{color:var(--no)}
+.more{display:block;width:100%;margin:12px 0 0;padding:9px;background:none;border:1px solid var(--rule);border-radius:8px;color:var(--muted);cursor:pointer}
+.empty{padding:26px 2px;color:var(--muted);font-size:14px}
+.empty b{color:var(--ink);font-weight:600}
+footer{padding:18px 16px 34px;max-width:1180px;margin:0 auto;font-size:12px;color:var(--muted);border-top:1px solid var(--rule)}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>Lithuanian name filter</h1>
+  <button class="reset" id="reset">Reset all</button>
+  <div class="count"><b id="n">0</b> <span>of 8,954 names</span></div>
+</header>
+
+<div class="wrap">
+<div class="panel">
+
+  <section>
+    <h2>Letters — tap to cycle: any · must have · exclude</h2>
+    <div class="lgrid" id="ltSpecial"></div>
+    <div class="lgrid" id="ltPlain" style="margin-top:6px"></div>
+    <div class="rules" id="rules"></div>
+    <div class="quick">
+      <button data-q="allspec">Exclude all diacritics</button>
+      <button data-q="endspec">Exclude diacritics, allow at end</button>
+      <button data-q="clear">Clear letter rules</button>
+    </div>
+    <p class="hint">Small figures are how many names contain the letter. For any excluded letter you can tick “ok at end”, which keeps it as the final character only — so excluding ė that way passes Eglė but drops Adėlė.</p>
+  </section>
+
+  <section>
+    <h2>Syllables</h2>
+    <div class="row">
+      <label for="smin">from</label><input type="number" id="smin" min="1" max="9" value="1">
+      <label for="smax">to</label><input type="number" id="smax" min="1" max="9" value="9">
+    </div>
+    <label class="toggle"><input type="checkbox" id="soften" checked>
+      <span>Treat i before a vowel as softening, not its own syllable (Liudas = 2, not 3)</span></label>
+  </section>
+
+  <section>
+    <h2>Letters in name</h2>
+    <div class="row">
+      <label for="lmin">from</label><input type="number" id="lmin" min="1" max="30" value="1">
+      <label for="lmax">to</label><input type="number" id="lmax" min="1" max="30" value="30">
+    </div>
+  </section>
+
+  <section>
+    <h2>Text</h2>
+    <div class="row" style="gap:6px">
+      <select id="mode"><option value="c">contains</option><option value="s">starts with</option><option value="e">ends with</option></select>
+      <input type="text" id="q" placeholder="e.g. vil" style="flex:1;min-width:120px">
+    </div>
+  </section>
+
+  <section>
+    <h2>Gender</h2>
+    <div class="chips" id="gender"></div>
+  </section>
+
+  <section>
+    <h2>Language commission verdict</h2>
+    <div class="chips" id="norm"></div>
+  </section>
+
+  <section>
+    <h2>Origin</h2>
+    <div class="chips" id="grp"></div>
+    <label class="toggle"><input type="checkbox" id="saint"><span>Saint’s name only</span></label>
+    <h2 style="margin-top:12px">Origin category</h2>
+    <div class="origins" id="pogr"></div>
+  </section>
+
+</div>
+
+<div class="results">
+  <div class="tools">
+    <div class="seg" id="view">
+      <button data-v="all" aria-pressed="true">Matches</button>
+      <button data-v="sel" aria-pressed="false">Picked <span id="selN">0</span></button>
+    </div>
+    <span class="sp"></span>
+    <label for="sort" style="font-size:13px;color:var(--muted)">Sort</label>
+    <select id="sort">
+      <option value="az">A–Z</option>
+      <option value="syl">fewest syllables</option>
+      <option value="len">shortest</option>
+      <option value="pop">most looked up</option>
+    </select>
+  </div>
+  <div class="tools">
+    <button class="act" id="pickAll">Pick all matches</button>
+    <button class="act" id="pickNone">Unpick all</button>
+    <span class="sp"></span>
+    <button class="act" id="copy">Copy</button>
+    <button class="act" id="csv">CSV</button>
+  </div>
+  <ul class="res" id="out"></ul>
+  <button class="more" id="more" hidden></button>
+  <p class="savenote" id="savenote"></p>
+</div>
+</div>
+
+<footer>
+Source: State Commission of the Lithuanian Language (VLKK) register of citizens’ given names, via data.gov.lt — names of citizens per the 2006 Population Register plus newborns since. 8,523 names carry full catalogue data; 431 appear only inside two‑name combinations and are marked uncatalogued. Syllable counts are computed from Lithuanian vowel and diphthong rules and are a good approximation, not an official count.
+</footer>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+const D = JSON.parse(document.getElementById('data').textContent);
+const ROWS = D.rows; // [name,gender,norm,saint,grp[],pogr[],posk[],pop,cataloged]
+const VOW = new Set('aąeęėiįyouųū');
+const DIPH = new Set(['ai','au','ei','eu','ie','ui','uo','oi','ou']);
+
+const S = {letters:{}, ends:{}, smin:1, smax:9, lmin:1, lmax:30, soften:true,
+  mode:'c', q:'', genderPicked:null, norm:new Set(), grp:new Set(), saint:false, pogr:new Set(),
+  sort:'az', shown:200, view:'all'};
+const PICKED = new Set();
+
+// Selection storage: artifact store if present, else localStorage, else memory only.
+const KEY='lt-names-picked-v1';
+const store = (()=>{
+  const w = window.storage;
+  if(w && typeof w.get==='function' && typeof w.set==='function') return {kind:'synced',
+    async load(){ try{ const r=await w.get(KEY); return r&&r.value?JSON.parse(r.value):[]; }catch{ return []; } },
+    async save(a){ try{ await w.set(KEY, JSON.stringify(a)); }catch{} }};
+  try{ const k='__probe'; localStorage.setItem(k,'1'); localStorage.removeItem(k);
+    return {kind:'local',
+      async load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{ return []; } },
+      async save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch{} }};
+  }catch{}
+  let mem=[]; return {kind:'memory', async load(){return mem;}, async save(a){mem=a.slice();}};
+})();
+let saveTimer=null;
+function persist(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>store.save([...PICKED]),250);
+}
+
+function syllables(name, soften){
+  const s = name.toLowerCase(); let i=0, t=0, any=false;
+  while(i<s.length){
+    if(VOW.has(s[i])){
+      any=true; let j=i; while(j<s.length && VOW.has(s[j])) j++;
+      let run = s.slice(i,j);
+      if(soften && run.length>1 && run[0]==='i' && i>0 && !VOW.has(s[i-1])) run = run.slice(1);
+      let k=0;
+      while(k<run.length){ if(k+1<run.length && DIPH.has(run.slice(k,k+2))){t++;k+=2;} else {t++;k++;} }
+      i=j;
+    } else i++;
+  }
+  return any ? Math.max(t,1) : 0;
+}
+const sylCache = {};
+function syl(name){
+  const key = (S.soften?'1':'0')+name;
+  return sylCache[key] ?? (sylCache[key] = syllables(name, S.soften));
+}
+
+// ---- letters: full alphabet, tri-state, with end-exception rules
+const charCount = {};
+ROWS.forEach(r=>{ new Set(r[0].toLowerCase()).forEach(c=>charCount[c]=(charCount[c]||0)+1); });
+const SPECIAL = ['ą','č','ę','ė','į','š','ų','ū','ž'];
+const ALPHA = ['a','b','c','d','e','f','g','h','i','y','j','k','l','m','n','o','p','r','s','t','u','v','z'];
+const EXTRA = Object.keys(charCount).filter(c=>!SPECIAL.includes(c)&&!ALPHA.includes(c)).sort();
+const LT = [...SPECIAL, ...ALPHA, ...EXTRA];
+LT.forEach(l=>{S.letters[l]=0; S.ends[l]=false;});
+
+function tile(l){
+  const t=document.createElement('div');
+  t.className='tile'; t.dataset.s='0'; t.dataset.l=l; t.tabIndex=0; t.setAttribute('role','button');
+  if(!charCount[l]) t.dataset.z='1';
+  t.setAttribute('aria-label', l+', in '+(charCount[l]||0)+' names');
+  t.innerHTML = `<span class="g">${l==='-'?'‑':l}</span><span class="c">${charCount[l]||0}</span>`;
+  const cycle=()=>{ S.letters[l]=(S.letters[l]+1)%3; if(S.letters[l]!==2) S.ends[l]=false; paint(); render(); };
+  t.addEventListener('click',cycle);
+  t.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();cycle();} });
+  return t;
+}
+SPECIAL.forEach(l=>document.getElementById('ltSpecial').appendChild(tile(l)));
+[...ALPHA,...EXTRA].forEach(l=>document.getElementById('ltPlain').appendChild(tile(l)));
+
+function paint(){
+  document.querySelectorAll('.tile').forEach(t=>t.dataset.s=S.letters[t.dataset.l]);
+  const box=document.getElementById('rules'); box.innerHTML='';
+  LT.filter(l=>S.letters[l]).forEach(l=>{
+    const exc=S.letters[l]===2;
+    const r=document.createElement('div');
+    r.className='rule '+(exc?'exc':'req');
+    r.innerHTML=`<span class="l">${l==='-'?'‑':l}</span><span class="w">${exc?'excluded':'must appear'}</span><span class="sp"></span>`
+      + (exc?`<label><input type="checkbox" ${S.ends[l]?'checked':''}> ok at end</label>`:'')
+      + `<button class="x" title="Clear this rule" aria-label="Clear rule for ${l}">×</button>`;
+    const cb=r.querySelector('input');
+    if(cb) cb.addEventListener('change',e=>{S.ends[l]=e.target.checked;render();});
+    r.querySelector('.x').addEventListener('click',()=>{S.letters[l]=0;S.ends[l]=false;paint();render();});
+    box.appendChild(r);
+  });
+}
+document.querySelectorAll('.quick button').forEach(b=>b.addEventListener('click',()=>{
+  const q=b.dataset.q;
+  if(q==='clear') LT.forEach(l=>{S.letters[l]=0;S.ends[l]=false;});
+  else SPECIAL.forEach(l=>{S.letters[l]=2;S.ends[l]=(q==='endspec');});
+  paint(); render();
+}));
+
+function chipGroup(id, items, onPick){
+  const el=document.getElementById(id);
+  items.forEach(([val,label])=>{
+    const b=document.createElement('button');
+    b.className='chip'; b.textContent=label; b.setAttribute('aria-pressed','false');
+    b.addEventListener('click',()=>onPick(val,b,el)); el.appendChild(b);
+  });
+}
+S.genderPicked = null;
+chipGroup('gender',[[1,'Women'],[2,'Men'],[0,'Unknown']],(v,b,el)=>{
+  const was = S.genderPicked === v;
+  el.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
+  S.genderPicked = was ? null : v;
+  if(!was) b.setAttribute('aria-pressed','true');
+  render();
+});
+chipGroup('norm',[[1,'Recommended'],[2,'Discouraged'],[3,'Not recommended'],[0,'Uncatalogued']],(v,b)=>{
+  S.norm.has(v)?S.norm.delete(v):S.norm.add(v);
+  b.setAttribute('aria-pressed', S.norm.has(v)); render();
+});
+chipGroup('grp',[[1,'Baltic'],[2,'Foreign'],[0,'Unclassified']],(v,b)=>{
+  S.grp.has(v)?S.grp.delete(v):S.grp.add(v);
+  b.setAttribute('aria-pressed', S.grp.has(v)); render();
+});
+
+const counts = D.pogr.map(()=>0);
+ROWS.forEach(r=>r[5].forEach(i=>counts[i]++));
+const elP = document.getElementById('pogr');
+D.pogr.map((name,i)=>[name,i]).sort((a,b)=>counts[b[1]]-counts[a[1]]).forEach(([name,i])=>{
+  const lab=document.createElement('label');
+  lab.innerHTML=`<input type="checkbox" value="${i}"><span>${name}</span><span class="n">${counts[i]}</span>`;
+  lab.querySelector('input').addEventListener('change',e=>{
+    e.target.checked?S.pogr.add(i):S.pogr.delete(i); render();
+  });
+  elP.appendChild(lab);
+});
+
+const bind=(id,key,fn)=>{const e=document.getElementById(id);
+  e.addEventListener(e.type==='checkbox'||e.tagName==='SELECT'?'change':'input',()=>{S[key]=fn(e);S.shown=200;render();});};
+bind('smin','smin',e=>+e.value||1); bind('smax','smax',e=>+e.value||9);
+bind('lmin','lmin',e=>+e.value||1); bind('lmax','lmax',e=>+e.value||30);
+document.getElementById('soften').addEventListener('change',e=>{S.soften=e.target.checked;render();});
+document.getElementById('mode').addEventListener('change',e=>{S.mode=e.target.value;render();});
+document.getElementById('q').addEventListener('input',e=>{S.q=e.target.value.trim().toLowerCase();S.shown=200;render();});
+document.getElementById('saint').addEventListener('change',e=>{S.saint=e.target.checked;render();});
+document.getElementById('sort').addEventListener('change',e=>{S.sort=e.target.value;render();});
+document.getElementById('more').addEventListener('click',()=>{S.shown+=400;render();});
+document.getElementById('reset').addEventListener('click',()=>location.reload());
+
+// ---- filtering
+function letterOk(lower){
+  for(const l of LT){
+    const st = S.letters[l];
+    if(st===0) continue;
+    const has = lower.includes(l);
+    if(st===1){ if(!has) return false; continue; }
+    if(!has) continue;
+    if(!S.ends[l]) return false;
+    // allowed only as final character: reject if it occurs anywhere else
+    const last = lower.length-1;
+    for(let i=0;i<lower.length;i++) if(lower[i]===l && i!==last) return false;
+  }
+  return true;
+}
+function match(r){
+  const name=r[0], lower=name.toLowerCase();
+  if(S.genderPicked!=null && r[1]!==S.genderPicked) return false;
+  if(S.norm.size && !S.norm.has(r[2])) return false;
+  if(S.saint && !r[3]) return false;
+  if(S.grp.size){ const g=r[4].length?r[4]:[0]; if(!g.some(x=>S.grp.has(x))) return false; }
+  if(S.pogr.size && !r[5].some(x=>S.pogr.has(x))) return false;
+  const L=[...name].length;
+  if(L<S.lmin || L>S.lmax) return false;
+  const sy=syl(name);
+  if(sy<S.smin || sy>S.smax) return false;
+  if(S.q){
+    if(S.mode==='c' && !lower.includes(S.q)) return false;
+    if(S.mode==='s' && !lower.startsWith(S.q)) return false;
+    if(S.mode==='e' && !lower.endsWith(S.q)) return false;
+  }
+  return letterOk(lower);
+}
+const NORMLBL={0:'uncatalogued',1:'recommended',2:'discouraged',3:'not recommended'};
+const GENLBL={0:'',1:'f',2:'m'};
+let matches=[], listed=[];
+
+function order(arr){
+  const a=arr.slice();
+  if(S.sort==='syl') a.sort((x,y)=>syl(x[0])-syl(y[0]) || x[0].localeCompare(y[0],'lt'));
+  else if(S.sort==='len') a.sort((x,y)=>[...x[0]].length-[...y[0]].length || x[0].localeCompare(y[0],'lt'));
+  else if(S.sort==='pop') a.sort((x,y)=>y[7]-x[7] || x[0].localeCompare(y[0],'lt'));
+  else a.sort((x,y)=>x[0].localeCompare(y[0],'lt'));
+  return a;
+}
+function row(r){
+  const bits=[]; if(GENLBL[r[1]]) bits.push(GENLBL[r[1]]);
+  bits.push(r[2]===1?'recommended':(r[2]===0?'uncatalogued':`<span class="w">${NORMLBL[r[2]]}</span>`));
+  if(r[3]) bits.push('saint');
+  if(r[5].length) bits.push(D.pogr[r[5][0]]);
+  const on=PICKED.has(r[0])?'1':'0';
+  return `<li data-on="${on}" data-name="${r[0]}">`
+    + `<button class="pick" aria-label="Pick ${r[0]}" aria-pressed="${on==='1'}"></button>`
+    + `<span class="name">${r[0]}</span><span class="syl">${syl(r[0])}</span>`
+    + `<span class="meta">${bits.join(' · ')}</span></li>`;
+}
+function render(){
+  matches = order(ROWS.filter(match));
+  listed = S.view==='sel' ? order(ROWS.filter(r=>PICKED.has(r[0]))) : matches;
+
+  document.getElementById('n').textContent = matches.length.toLocaleString('en-US');
+  document.getElementById('selN').textContent = PICKED.size;
+  document.querySelectorAll('#view button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===S.view));
+
+  const out=document.getElementById('out'), more=document.getElementById('more');
+  if(!listed.length){
+    out.innerHTML = S.view==='sel'
+      ? '<li class="empty">Nothing picked yet. Tap the circle beside a name to keep it.</li>'
+      : '<li class="empty">No name fits these rules. Loosen a letter rule or widen the syllable range.</li>';
+    more.hidden=true; return;
+  }
+  out.innerHTML = listed.slice(0,S.shown).map(row).join('');
+  more.hidden = listed.length<=S.shown;
+  more.textContent = `Show 400 more (${(listed.length-S.shown).toLocaleString('en-US')} left)`;
+}
+
+// ---- picking
+function toggle(name){
+  PICKED.has(name)?PICKED.delete(name):PICKED.add(name);
+  persist();
+  const li=document.querySelector(`#out li[data-name="${CSS.escape(name)}"]`);
+  if(li && S.view==='all'){
+    const on=PICKED.has(name);
+    li.dataset.on=on?'1':'0';
+    li.querySelector('.pick').setAttribute('aria-pressed',on);
+    document.getElementById('selN').textContent=PICKED.size;
+  } else render();
+}
+document.getElementById('out').addEventListener('click',e=>{
+  const li=e.target.closest('li[data-name]'); if(li) toggle(li.dataset.name);
+});
+document.querySelectorAll('#view button').forEach(b=>b.addEventListener('click',()=>{
+  S.view=b.dataset.v; S.shown=200; render();
+}));
+document.getElementById('pickAll').addEventListener('click',()=>{
+  matches.forEach(r=>PICKED.add(r[0])); persist(); render();
+});
+document.getElementById('pickNone').addEventListener('click',()=>{
+  if(S.view==='sel' || !matches.length) PICKED.clear();
+  else matches.forEach(r=>PICKED.delete(r[0]));
+  persist(); render();
+});
+
+// ---- export (acts on whatever the list is showing)
+document.getElementById('copy').addEventListener('click',async e=>{
+  const t=listed.map(r=>r[0]).join('\n');
+  try{ await navigator.clipboard.writeText(t); e.target.textContent='Copied'; }
+  catch{ e.target.textContent='Blocked'; }
+  setTimeout(()=>e.target.textContent='Copy',1400);
+});
+document.getElementById('csv').addEventListener('click',()=>{
+  const head='name,syllables,letters,gender,verdict,saint,picked,origin_groups,origin_category\n';
+  const G={0:'',1:'Moteris',2:'Vyras'}, N={0:'',1:'Teiktinas',2:'Vengtinas',3:'Neteiktinas'}, GR={1:'Baltiska',2:'Svetima'};
+  const body=listed.map(r=>[r[0],syl(r[0]),[...r[0]].length,G[r[1]],N[r[2]],r[3]?'yes':'no',
+    PICKED.has(r[0])?'yes':'no', r[4].map(x=>GR[x]).join('; '), r[5].map(x=>D.pogr[x]).join('; ')]
+    .map(v=>/[",;\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+head+body],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = (S.view==='sel'?'lithuanian-names-picked.csv':'lithuanian-names-filtered.csv');
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+document.getElementById('savenote').textContent = store.kind==='memory'
+  ? 'Picks are held for this session only — this browser is blocking storage. Download the page and open it locally to keep them.'
+  : 'Picks are saved on this device and come back when you reload.';
+
+paint();
+store.load().then(a=>{ (a||[]).forEach(n=>PICKED.add(n)); render(); });
+</script>
+</body>
+</html>
