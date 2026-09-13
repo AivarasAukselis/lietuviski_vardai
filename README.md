@@ -3,7 +3,8 @@
 A single-page tool for searching 8,954 given names from the Lithuanian register
 of citizens' names. Filter by syllable count, by which letters a name may or may
 not contain, and by the register's own metadata — then shortlist the names you
-like and export them.
+like, export them, and load someone else's shortlist back in to see which names
+you agree on.
 
 No build step, no dependencies, no network calls. `index.html` contains the
 dataset and runs offline.
@@ -35,10 +36,35 @@ not an official count.
 it is a saint's name, and 53 origin categories such as *dvikamienis
 asmenvardis*, *graikiškas asmenvardis* or *trumpinys*.
 
+**Layout.** Every active constraint appears as a chip above the results and can
+be cleared from there. On a phone the filters live in a slide-over sheet, so the
+names are the page rather than something you scroll to.
+
 **Shortlisting.** Tap a name to keep it. Picks are stored per device and reload
-with the page; Reset clears the filters but leaves them alone. Copy and CSV
-export whatever list is on screen, so exporting from the Picked tab gives you
-just your shortlist.
+with the page; *Clear all filters* leaves them alone. Copy and CSV export
+whatever list is on screen, so exporting from the Picked tab gives you just your
+shortlist.
+
+**Imported lists.** Any list this page produces can be loaded back in, and each
+import becomes a colour. Drop a file anywhere on the page, browse for one, or
+paste names straight from Copy. A list can then be set to *must be in* or
+*exclude*, so two people who each shortlisted separately can load both files, set
+both to *must be in*, and see only the names they agree on — every row shows a
+coloured dot per list it belongs to, and *Sort → in most lists* ranks by
+agreement. Up to twelve lists at a time; they persist per device like the picks.
+
+Three formats are read: the CSV this page exports (any delimiter; if it carries a
+`picked` column that is actually used, only the picked rows are taken), plain
+text with one name per line as produced by Copy, and JSON — either `["Eglė",…]`
+or `{"label":"…","names":[…]}`.
+
+Imported names are matched against the register exactly, ignoring case. A
+spelling that matches nothing is folded to its plain-ASCII form and accepted only
+when exactly one register name fits, because the register lists `Egle` and `Eglė`,
+`Ruta` and `Rūta` as separate names — guessing between them would quietly change
+someone's list. Corrections are reported (`Agate → Agatė`), ambiguous spellings
+offer the candidates as buttons, and anything unrecognised is listed rather than
+dropped.
 
 ## Publishing it
 
@@ -52,13 +78,21 @@ The page is static, so GitHub Pages serves it as-is:
 
 ## Rebuilding from source data
 
-`data/names.json` and the dataset inlined in `index.html` are generated. To
-regenerate them, download *Vardų lingvistiniai duomenys*
+`names.json` and the dataset inlined in `index.html` are generated. `index.html`
+is `template.html` with the dataset substituted in, so **edit `template.html`, not
+`index.html`**, then rebuild:
+
+```sh
+python build.py            # re-inline the committed names.json into index.html
+python build.py --check    # fail if index.html is out of date with template.html
+```
+
+To rebuild the dataset itself, download *Vardų lingvistiniai duomenys*
 ([dataset 2664](https://data.gov.lt/datasets/2664/)) as newline-delimited JSON
 and run:
 
 ```sh
-python build/build.py vardai.jsonl
+python build.py vardai.jsonl
 ```
 
 The script derives distinct given names from the register's entries, most of
@@ -67,7 +101,7 @@ carry full catalogue data. A further 431 occur only inside combinations, have no
 catalogue data of their own, and are marked *uncatalogued* in the interface with
 gender inferred from the combinations they appear in.
 
-Row format in `data/names.json`:
+Row format in `names.json`:
 
 ```
 [name, gender, verdict, saint, origin_groups[], subgroups[], subsections[], lookups, catalogued]

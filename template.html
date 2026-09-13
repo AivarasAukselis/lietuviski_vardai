@@ -3,131 +3,291 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Filter 8,954 Lithuanian given names by syllable count, permitted letters and register metadata.">
+<meta name="description" content="Filter 8,954 Lithuanian given names by syllable count, permitted letters and register metadata. Import shortlists and compare them side by side.">
 <title>Lithuanian name filter — VLKK register</title>
 <style>
 :root{
-  --paper:#E6E9E6; --card:#FCFDFC; --ink:#16202B; --muted:#5F6C78;
-  --rule:#C7CEC9; --yes:#1F6A52; --no:#7A3352; --focus:#2F6F5E;
+  --paper:#F4F2EC; --card:#FFFFFF; --ink:#1B1F24; --muted:#6C737C;
+  --rule:#E3DFD5; --rule-2:#CBC5B8; --sink:#EDEAE1;
+  --yes:#1E6B52; --no:#8A3A50; --focus:#2F6F5E;
+  --l0:#2D5DA8; --l1:#B4622A; --l2:#6B4E9B; --l3:#17727F;
+  --l4:#8A6A11; --l5:#4A5A6B; --l6:#8E4FA8; --l7:#6E4B32;
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --xs:11.5px; --sm:13px; --md:15px; --lg:17px; --xl:22px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  --r1:7px; --r2:11px; --r3:999px;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}   /* id rules below would otherwise outrank it */
 html,body{margin:0}
-body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
-button,input,select{font:inherit;color:inherit}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:var(--md);
+  line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+h2{font-size:var(--xs);font-weight:600;color:var(--muted);margin:0 0 var(--s2);
+  letter-spacing:.08em;text-transform:uppercase}
+.hint{font-size:var(--sm);color:var(--muted);margin:var(--s2) 0 0;line-height:1.4}
+.sp{margin-left:auto}
 
-header.bar{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);
-  padding:10px 16px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-header.bar h1{font-family:var(--serif);font-weight:600;font-size:19px;margin:0;letter-spacing:.1px}
-.count{font-family:var(--serif);font-size:17px;margin-left:auto}
+/* header */
+header.bar{position:sticky;top:0;z-index:20;background:var(--paper);
+  border-bottom:1px solid var(--rule);padding:var(--s3) var(--s4);
+  display:flex;align-items:baseline;gap:var(--s3)}
+header.bar h1{font-family:var(--serif);font-weight:600;font-size:var(--lg);margin:0;
+  letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{font-family:var(--serif);font-size:var(--lg);margin-left:auto;white-space:nowrap}
 .count b{font-weight:600}
-.count span{color:var(--muted);font-family:var(--sans);font-size:13px}
-.reset{background:none;border:1px solid var(--rule);border-radius:999px;padding:3px 11px;font-size:13px;color:var(--muted);cursor:pointer}
-.reset:hover{color:var(--ink);border-color:var(--ink)}
+.count span{color:var(--muted);font-family:var(--sans);font-size:var(--sm)}
+@media(max-width:420px){header.bar h1{font-size:var(--md)}.count{font-size:var(--md)}}
 
-.wrap{max-width:1180px;margin:0 auto;padding:16px}
+/* shell */
+.wrap{max-width:1220px;margin:0 auto;padding:var(--s4)}
+.results{min-width:0}
 @media(min-width:940px){
-  .wrap{display:grid;grid-template-columns:400px 1fr;gap:28px;align-items:start;padding:22px}
-  .panel{position:sticky;top:56px;max-height:calc(100vh - 76px);overflow-y:auto;padding-right:6px}
+  .wrap{display:grid;grid-template-columns:390px 1fr;gap:var(--s6);align-items:start;
+    padding:var(--s5) var(--s5) var(--s6)}
+  .panel{position:sticky;top:60px;max-height:calc(100vh - 84px);overflow-y:auto;
+    padding-right:var(--s2);scrollbar-width:thin}
 }
+.panel section{margin:0 0 var(--s5);padding:0 0 var(--s5);border-bottom:1px solid var(--rule)}
+.panel section:last-child{border-bottom:0;padding-bottom:0}
 
-section{margin:0 0 18px}
-h2{font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 8px;letter-spacing:.3px}
-.hint{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+/* generic controls */
+.row{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap}
+.row label{font-size:var(--sm);color:var(--muted)}
+select,input[type=text],input[type=number],textarea{background:var(--card);
+  border:1px solid var(--rule-2);border-radius:var(--r1);padding:6px var(--s2)}
+input[type=text]{width:100%}
+input[type=number]{width:66px}
+textarea{width:100%;resize:vertical;font-size:var(--sm);line-height:1.4}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.chip{background:var(--card);border:1px solid var(--rule-2);border-radius:var(--r3);
+  padding:5px var(--s3);font-size:var(--sm);cursor:pointer}
+.chip:hover{border-color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.toggle{display:flex;gap:var(--s2);align-items:flex-start;font-size:var(--sm);
+  color:var(--muted);cursor:pointer;margin-top:var(--s3)}
+.toggle input{margin:3px 0 0;accent-color:var(--focus);flex:none}
+.act{background:var(--card);border:1px solid var(--rule-2);border-radius:var(--r1);
+  padding:6px var(--s3);font-size:var(--sm);cursor:pointer;white-space:nowrap}
+.act:hover{border-color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--rule-2);border-radius:var(--r3);
+  overflow:hidden;background:var(--card)}
+.seg button{background:none;border:0;padding:6px var(--s3);font-size:var(--sm);
+  color:var(--muted);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
 
 /* letters */
-.lgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.lgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:var(--s1)}
 @media(min-width:520px){.lgrid{grid-template-columns:repeat(9,1fr)}}
-.tile{background:var(--card);border:1px solid var(--rule);border-radius:7px;padding:5px 2px 4px;text-align:center;cursor:pointer;-webkit-user-select:none;user-select:none}
-.tile .g{font-family:var(--serif);font-size:20px;line-height:1.1;display:block}
-.tile .c{font-size:9.5px;color:var(--muted);display:block}
-.tile[data-s="1"]{border-color:var(--yes);background:#E7F0EC;color:var(--yes)}
-.tile[data-s="2"]{border-color:var(--no);background:#F3E8ED;color:var(--no)}
-.tile[data-s="1"] .c,.tile[data-s="2"] .c{color:inherit;opacity:.65}
-.tile[data-z="1"] .g{opacity:.35}
-.rules{margin-top:9px;display:flex;flex-direction:column;gap:5px}
-.rule{display:flex;align-items:center;gap:8px;font-size:13px;background:var(--card);
-  border:1px solid var(--rule);border-left:3px solid var(--rule);border-radius:6px;padding:4px 7px}
-.rule.req{border-left-color:var(--yes)}
-.rule.exc{border-left-color:var(--no)}
-.rule .l{font-family:var(--serif);font-size:18px;min-width:15px}
-.rule .w{color:var(--muted)}
-.rule .sp{margin-left:auto}
-.rule label{display:flex;gap:5px;align-items:center;font-size:12px;color:var(--no);cursor:pointer}
-.rule label input{margin:0;width:13px;height:13px;accent-color:var(--no)}
-.rule .x{background:none;border:0;color:var(--muted);font-size:17px;line-height:1;cursor:pointer;padding:0 3px}
-.rule .x:hover{color:var(--ink)}
-.quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.quick button{background:none;border:1px dashed var(--rule);border-radius:6px;padding:4px 9px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.tile{background:var(--card);border:1px solid var(--rule-2);border-radius:var(--r1);
+  padding:6px 2px 5px;text-align:center;cursor:pointer;-webkit-user-select:none;user-select:none}
+.tile .g{font-family:var(--serif);font-size:20px;line-height:1.15;display:block}
+.tile .c{font-size:9.5px;color:var(--muted);display:block;line-height:1.3}
+.tile[data-s="1"]{border-color:var(--yes);background:color-mix(in srgb,var(--yes) 11%,var(--card));color:var(--yes)}
+.tile[data-s="2"]{border-color:var(--no);background:color-mix(in srgb,var(--no) 10%,var(--card));color:var(--no)}
+.tile[data-s="1"] .c,.tile[data-s="2"] .c{color:inherit;opacity:.7}
+.tile[data-z="1"] .g{opacity:.32}
+.quick{display:flex;flex-wrap:wrap;gap:var(--s1);margin-top:var(--s3)}
+.quick button{background:none;border:1px dashed var(--rule-2);border-radius:var(--r1);
+  padding:5px var(--s2);font-size:12.5px;color:var(--muted);cursor:pointer}
 .quick button:hover{color:var(--ink);border-color:var(--ink);border-style:solid}
 
-/* selection */
-.seg{display:inline-flex;border:1px solid var(--rule);border-radius:999px;overflow:hidden;background:var(--card)}
-.seg button{background:none;border:0;padding:5px 13px;font-size:13px;color:var(--muted);cursor:pointer}
-.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
-.pick{flex:none;width:19px;height:19px;border-radius:50%;border:1.5px solid var(--rule);background:var(--card);
-  cursor:pointer;padding:0;position:relative;align-self:center}
-li[data-on="1"] .pick{background:var(--yes);border-color:var(--yes)}
-li[data-on="1"] .pick::after{content:"";position:absolute;left:5px;top:2.5px;width:5px;height:9px;
-  border:solid var(--card);border-width:0 1.6px 1.6px 0;transform:rotate(42deg)}
-li[data-on="1"] .name{color:var(--yes)}
-.savenote{font-size:12px;color:var(--muted);margin:10px 0 0}
+/* origin categories */
+.origins{max-height:172px;overflow-y:auto;border:1px solid var(--rule-2);
+  border-radius:var(--r2);background:var(--card);padding:var(--s2) var(--s3)}
+.origins label{display:flex;gap:var(--s2);align-items:baseline;font-size:var(--sm);
+  padding:3px 0;color:var(--ink);cursor:pointer}
+.origins input{accent-color:var(--focus);margin:0;flex:none}
+.origins .n{color:var(--muted);font-size:var(--xs);margin-left:auto;padding-left:var(--s2)}
 
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.row label{font-size:13px;color:var(--muted)}
-select,input[type=text],input[type=number]{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:6px 8px}
-input[type=text]{width:100%}
-input[type=number]{width:62px}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{background:var(--card);border:1px solid var(--rule);border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer}
-.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.toggle{display:flex;gap:7px;align-items:flex-start;font-size:13px;color:var(--muted);cursor:pointer;margin-top:8px}
-.toggle input{margin:2px 0 0;accent-color:var(--focus)}
-.origins{max-height:168px;overflow-y:auto;border:1px solid var(--rule);border-radius:8px;background:var(--card);padding:6px 9px}
-.origins label{display:flex;gap:7px;align-items:baseline;font-size:13px;padding:2px 0;color:var(--ink);cursor:pointer}
-.origins input{accent-color:var(--focus);margin:0}
-.origins .n{color:var(--muted);font-size:11.5px;margin-left:auto}
+/* imported lists */
+.lcard{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--rule-2);
+  border-radius:var(--r2);padding:var(--s2) var(--s3);margin-bottom:var(--s2)}
+.lcard.on{border-left-color:var(--c)}
+.lhead{display:flex;align-items:center;gap:var(--s2)}
+.sw{width:11px;height:11px;border-radius:50%;flex:none;background:var(--c)}
+.llabel{flex:1;min-width:0;border:1px solid transparent;background:none;border-radius:var(--r1);
+  padding:2px var(--s1);font-size:var(--md);font-weight:600}
+.llabel:hover{border-color:var(--rule)}
+.llabel:focus{border-color:var(--rule-2);background:var(--paper)}
+.lx{background:none;border:0;color:var(--muted);font-size:19px;line-height:1;
+  cursor:pointer;padding:0 var(--s1);flex:none}
+.lx:hover{color:var(--no)}
+.lfoot{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s2);flex-wrap:wrap}
+.lnum{font-size:var(--xs);color:var(--muted)}
+.miss{font-size:var(--xs);color:var(--muted);margin-top:var(--s1)}
+.miss summary{cursor:pointer;color:var(--no)}
+.miss .body{padding:var(--s1) 0 0;line-height:1.6}
+.miss b{font-weight:600;color:var(--ink)}
+.miss .fix{margin-top:var(--s2)}
+.drop{width:100%;background:none;border:1px dashed var(--rule-2);border-radius:var(--r2);
+  padding:var(--s3);font-size:var(--sm);color:var(--muted);cursor:pointer;text-align:center;
+  display:block;line-height:1.4}
+.drop:hover{border-color:var(--focus);color:var(--ink);border-style:solid}
+.paste{margin-top:var(--s2);font-size:var(--sm);color:var(--muted)}
+.paste summary{cursor:pointer;padding:var(--s1) 0}
+.paste textarea{margin-top:var(--s1)}
+
+/* active filters */
+.active{display:flex;flex-wrap:wrap;gap:var(--s1);margin:0 0 var(--s3)}
+.active:empty{display:none}
+.fchip{display:inline-flex;align-items:center;gap:var(--s1);background:var(--card);
+  border:1px solid var(--rule);border-left:3px solid var(--rule-2);border-radius:var(--r1);
+  padding:3px var(--s1) 3px var(--s2);font-size:12.5px;max-width:100%}
+.fchip.req{border-left-color:var(--yes)}
+.fchip.exc{border-left-color:var(--no)}
+.fchip.lst{border-left-color:var(--c)}
+.fchip .l{font-family:var(--serif);font-size:16px}
+.fchip .tx{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fchip .x{background:none;border:0;color:var(--muted);font-size:15px;line-height:1;
+  cursor:pointer;padding:0 3px;flex:none}
+.fchip .x:hover{color:var(--ink)}
+.fchip .sub{background:none;border:1px solid var(--rule-2);border-radius:var(--r3);
+  font-size:11px;padding:0 7px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.fchip .sub[aria-pressed="true"]{background:var(--no);border-color:var(--no);color:var(--card)}
+.fchip.mode{border-left-color:var(--ink);cursor:pointer}
+.clearall{background:none;border:1px solid var(--rule-2);border-radius:var(--r1);
+  padding:3px var(--s2);font-size:12.5px;color:var(--muted);cursor:pointer}
+.clearall:hover{color:var(--ink);border-color:var(--ink)}
+
+/* tools */
+.tools{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;margin-bottom:var(--s3)}
+.tools label{font-size:var(--sm);color:var(--muted)}
+.menu{position:relative}
+.menu summary{list-style:none;display:inline-block}
+.menu summary::-webkit-details-marker{display:none}
+.menu .mbody{position:absolute;right:0;top:calc(100% + 5px);z-index:25;min-width:210px;
+  background:var(--card);border:1px solid var(--rule-2);border-radius:var(--r2);
+  padding:var(--s1);box-shadow:0 8px 24px rgba(27,31,36,.13)}
+.menu .mbody button{display:block;width:100%;text-align:left;background:none;border:0;
+  padding:7px var(--s2);font-size:var(--sm);border-radius:var(--r1);cursor:pointer}
+.menu .mbody button:hover{background:var(--sink)}
+.menu .mbody hr{border:0;border-top:1px solid var(--rule);margin:var(--s1) 0}
+.menu .mbody .danger{color:var(--no)}
 
 /* results */
-.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
-.tools .sp{margin-left:auto}
-.act{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer}
-.act:hover{border-color:var(--ink)}
 ul.res{list-style:none;margin:0;padding:0;border-top:1px solid var(--rule)}
-ul.res li{display:flex;align-items:baseline;gap:10px;padding:7px 2px;border-bottom:1px solid var(--rule)}
-.name{font-family:var(--serif);font-size:20px}
-.syl{font-size:11.5px;color:var(--muted);border:1px solid var(--rule);border-radius:4px;padding:0 5px;flex:none}
-.meta{font-size:12px;color:var(--muted);margin-left:auto;text-align:right;flex:none}
+ul.res li{display:grid;grid-template-columns:auto minmax(0,1fr);
+  grid-template-areas:"pick hd" ". meta";column-gap:var(--s3);row-gap:1px;
+  align-items:baseline;padding:9px 2px;border-bottom:1px solid var(--rule)}
+ul.res li.empty{display:block;padding:var(--s6) 2px;color:var(--muted);font-size:14px}
+ul.res li.empty b{color:var(--ink);font-weight:600}
+.pick{grid-area:pick;flex:none;width:22px;height:22px;border-radius:50%;
+  border:1.5px solid var(--rule-2);background:var(--card);cursor:pointer;padding:0;
+  position:relative;align-self:center}
+li[data-on="1"] .pick{background:var(--yes);border-color:var(--yes)}
+li[data-on="1"] .pick::after{content:"";position:absolute;left:6px;top:3px;width:6px;height:10px;
+  border:solid var(--card);border-width:0 1.7px 1.7px 0;transform:rotate(42deg)}
+li[data-on="1"] .name{color:var(--yes)}
+.hd{grid-area:hd;display:flex;align-items:baseline;gap:var(--s2);min-width:0}
+.name{font-family:var(--serif);font-size:var(--xl);line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.syl{font-size:var(--xs);color:var(--muted);border:1px solid var(--rule);
+  border-radius:var(--r1);padding:0 5px;flex:none}
+.dots{display:inline-flex;gap:3px;align-items:center;flex:none}
+.dot{width:9px;height:9px;border-radius:50%;border:0;padding:0;cursor:pointer;flex:none}
+.meta{grid-area:meta;font-size:12px;color:var(--muted);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
 .meta .w{color:var(--no)}
-.more{display:block;width:100%;margin:12px 0 0;padding:9px;background:none;border:1px solid var(--rule);border-radius:8px;color:var(--muted);cursor:pointer}
-.empty{padding:26px 2px;color:var(--muted);font-size:14px}
-.empty b{color:var(--ink);font-weight:600}
-footer{padding:18px 16px 34px;max-width:1180px;margin:0 auto;font-size:12px;color:var(--muted);border-top:1px solid var(--rule)}
+@media(min-width:700px){
+  ul.res li{grid-template-columns:auto auto minmax(0,1fr);grid-template-areas:"pick hd meta"}
+  .meta{text-align:right}
+}
+.c0{--c:var(--l0)}.c1{--c:var(--l1)}.c2{--c:var(--l2)}.c3{--c:var(--l3)}
+.c4{--c:var(--l4)}.c5{--c:var(--l5)}.c6{--c:var(--l6)}.c7{--c:var(--l7)}
+.dot{background:var(--c)}
+.more{display:block;width:100%;margin:var(--s3) 0 0;padding:10px;background:none;
+  border:1px solid var(--rule-2);border-radius:var(--r2);color:var(--muted);cursor:pointer}
+.more:hover{color:var(--ink);border-color:var(--ink)}
+.savenote{font-size:12px;color:var(--muted);margin:var(--s4) 0 0}
+footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
+  font-size:12px;color:var(--muted);border-top:1px solid var(--rule);line-height:1.6}
+
+/* sheet, mobile bar, overlays */
+.phead{display:none}
+#veil{display:none;position:fixed;inset:0;z-index:35;background:rgba(27,31,36,.36)}
+.mbar{display:none}
+@media(max-width:939px){
+  .wrap{padding-bottom:var(--s6)}
+  .panel{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);z-index:40;
+    background:var(--paper);border-left:1px solid var(--rule-2);overflow-y:auto;
+    padding:var(--s3) var(--s4) 96px;transform:translateX(101%);visibility:hidden;
+    /* visible at once on open, hidden only after it has slid away on close */
+    transition:transform .22s ease,visibility 0s linear .22s;
+    box-shadow:-8px 0 26px rgba(27,31,36,.16)}
+  body[data-sheet="1"] .panel{transform:none;visibility:visible;
+    transition:transform .22s ease,visibility 0s}
+  body[data-sheet="1"]{overflow:hidden}
+  .phead{display:flex;align-items:center;justify-content:space-between;gap:var(--s2);
+    position:sticky;top:0;background:var(--paper);padding:var(--s1) 0 var(--s2);
+    border-bottom:1px solid var(--rule);margin-bottom:var(--s4);z-index:1}
+  .phead strong{font-family:var(--serif);font-size:var(--lg);font-weight:600}
+  body[data-sheet="1"] #veil{display:block}
+  .mbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;gap:var(--s2);
+    align-items:center;background:var(--card);border-top:1px solid var(--rule-2);
+    padding:var(--s2) var(--s3) calc(var(--s2) + env(safe-area-inset-bottom))}
+  .mbar .mcount{font-family:var(--serif);font-size:var(--md)}
+  .mbar .mcount span{font-family:var(--sans);font-size:var(--xs);color:var(--muted)}
+  .results{padding-bottom:60px}
+  #note{bottom:72px}
+  .badge{background:var(--ink);color:var(--paper);border-radius:var(--r3);
+    font-size:11px;padding:0 6px;margin-left:3px}
+  .tools .seg{flex:1 1 100%;justify-content:center}
+  .tools .seg button{flex:1}
+  .tools #sort{flex:1 1 80px;min-width:0}
+}
+@media(prefers-reduced-motion:reduce){.panel{transition:none}}
+#dropveil{position:fixed;inset:0;z-index:60;background:rgba(27,31,36,.5);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:var(--lg);
+  font-family:var(--serif);pointer-events:none}
+#note{position:fixed;left:50%;bottom:var(--s5);transform:translateX(-50%);z-index:70;
+  background:var(--ink);color:var(--paper);border-radius:var(--r2);padding:var(--s2) var(--s4);
+  font-size:var(--sm);max-width:min(520px,92vw);box-shadow:0 8px 24px rgba(27,31,36,.24)}
+#note:empty{display:none}
 </style>
 </head>
 <body>
 <header class="bar">
   <h1>Lithuanian name filter</h1>
-  <button class="reset" id="reset">Reset all</button>
   <div class="count"><b id="n">0</b> <span>of 8,954 names</span></div>
 </header>
 
 <div class="wrap">
-<div class="panel">
+<aside class="panel" id="panel" aria-label="Filters">
+
+  <div class="phead"><strong>Filters</strong><button class="act" id="sheetClose">Done</button></div>
+
+  <section id="listSec">
+    <h2>Imported lists</h2>
+    <div id="lists"></div>
+    <button class="drop" id="importBtn">Import a list — drop a file anywhere, or browse</button>
+    <input type="file" id="fileIn" multiple hidden
+      accept=".csv,.txt,.json,text/csv,text/plain,application/json">
+    <details class="paste">
+      <summary>or paste a list of names</summary>
+      <textarea id="paste" rows="3" placeholder="One name per line"></textarea>
+      <button class="act" id="pasteAdd" style="margin-top:6px">Add pasted names</button>
+    </details>
+    <p class="hint">A list exported from this page — CSV, copied text or JSON — becomes a
+      colour you can filter by. Load two shortlists and set both to <b>must be in</b> to see
+      the names you agree on.</p>
+    <button class="act" id="listClear" hidden style="margin-top:var(--s3)">Remove all lists</button>
+  </section>
 
   <section>
     <h2>Letters — tap to cycle: any · must have · exclude</h2>
     <div class="lgrid" id="ltSpecial"></div>
-    <div class="lgrid" id="ltPlain" style="margin-top:6px"></div>
-    <div class="rules" id="rules"></div>
+    <div class="lgrid" id="ltPlain" style="margin-top:var(--s1)"></div>
     <div class="quick">
       <button data-q="allspec">Exclude all diacritics</button>
       <button data-q="endspec">Exclude diacritics, allow at end</button>
       <button data-q="clear">Clear letter rules</button>
     </div>
-    <p class="hint">Small figures are how many names contain the letter. For any excluded letter you can tick “ok at end”, which keeps it as the final character only — so excluding ė that way passes Eglė but drops Adėlė.</p>
+    <p class="hint">Small figures are how many names contain the letter. For any excluded
+      letter you can tick “ok at end”, which keeps it as the final character only — so
+      excluding ė that way passes Eglė but drops Adėlė.</p>
   </section>
 
   <section>
@@ -170,39 +330,56 @@ footer{padding:18px 16px 34px;max-width:1180px;margin:0 auto;font-size:12px;colo
     <h2>Origin</h2>
     <div class="chips" id="grp"></div>
     <label class="toggle"><input type="checkbox" id="saint"><span>Saint’s name only</span></label>
-    <h2 style="margin-top:12px">Origin category</h2>
+    <h2 style="margin-top:var(--s4)">Origin category</h2>
     <div class="origins" id="pogr"></div>
   </section>
 
-</div>
+</aside>
 
-<div class="results">
+<main class="results">
+  <div class="active" id="active"></div>
   <div class="tools">
     <div class="seg" id="view">
       <button data-v="all" aria-pressed="true">Matches</button>
       <button data-v="sel" aria-pressed="false">Picked <span id="selN">0</span></button>
     </div>
     <span class="sp"></span>
-    <label for="sort" style="font-size:13px;color:var(--muted)">Sort</label>
+    <label for="sort">Sort</label>
     <select id="sort">
       <option value="az">A–Z</option>
       <option value="syl">fewest syllables</option>
       <option value="len">shortest</option>
       <option value="pop">most looked up</option>
     </select>
-  </div>
-  <div class="tools">
-    <button class="act" id="pickAll">Pick all matches</button>
-    <button class="act" id="pickNone">Unpick all</button>
-    <span class="sp"></span>
     <button class="act" id="copy">Copy</button>
     <button class="act" id="csv">CSV</button>
+    <details class="menu" id="menu">
+      <summary class="act" aria-label="More actions">More ▾</summary>
+      <div class="mbody">
+        <button id="importBtn2">Import a list…</button>
+        <hr>
+        <button id="pickAll">Pick all matches</button>
+        <button id="pickNone">Unpick all</button>
+        <hr>
+        <button id="reset">Clear all filters</button>
+      </div>
+    </details>
   </div>
   <ul class="res" id="out"></ul>
   <button class="more" id="more" hidden></button>
   <p class="savenote" id="savenote"></p>
+</main>
 </div>
-</div>
+
+<div id="veil" hidden></div>
+<nav class="mbar">
+  <button class="act" id="sheetOpen" aria-expanded="false" aria-controls="panel">Filters<span class="badge" id="fcount" hidden>0</span></button>
+  <span class="mcount"><b id="n2">0</b> <span>names</span></span>
+  <span class="sp"></span>
+  <button class="act" id="toTop">Top</button>
+</nav>
+<div id="dropveil" hidden>Drop name lists here</div>
+<div id="note" role="status" aria-live="polite"></div>
 
 <footer>
 Source: State Commission of the Lithuanian Language (VLKK) register of citizens’ given names, via data.gov.lt — names of citizens per the 2006 Population Register plus newborns since. 8,523 names carry full catalogue data; 431 appear only inside two‑name combinations and are marked uncatalogued. Syllable counts are computed from Lithuanian vowel and diphthong rules and are a good approximation, not an official count.
@@ -214,30 +391,64 @@ const D = JSON.parse(document.getElementById('data').textContent);
 const ROWS = D.rows; // [name,gender,norm,saint,grp[],pogr[],posk[],pop,cataloged]
 const VOW = new Set('aąeęėiįyouųū');
 const DIPH = new Set(['ai','au','ei','eu','ie','ui','uo','oi','ou']);
+const $ = id => document.getElementById(id);
 
-const S = {letters:{}, ends:{}, smin:1, smax:9, lmin:1, lmax:30, soften:true,
-  mode:'c', q:'', genderPicked:null, norm:new Set(), grp:new Set(), saint:false, pogr:new Set(),
-  sort:'az', shown:200, view:'all'};
+// Imported labels and imported names are user input. Anything of theirs that reaches an
+// HTML string goes through esc(); everywhere else the panel builds nodes and sets
+// textContent, so their text never becomes markup at all.
+const ESCMAP = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+const esc = s => String(s).replace(/[&<>"']/g, c => ESCMAP[c]);
+
+// Name lookup. Exact (case-insensitive) always wins: the register lists Egle and Eglė,
+// Ruta and Rūta as separate names, so folding diacritics first would rewrite one real
+// name into another. The folded map is only a suggestion for input that matches nothing.
+const fold = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const BYNAME = new Map(), BYFOLD = new Map();
+ROWS.forEach(r => {
+  BYNAME.set(r[0].toLowerCase(), r[0]);
+  const f = fold(r[0]);
+  if(BYFOLD.has(f)) BYFOLD.get(f).push(r[0]); else BYFOLD.set(f, [r[0]]);
+});
+
+const DEF = () => ({smin:1, smax:9, lmin:1, lmax:30, soften:true, mode:'c', q:'',
+  genderPicked:null, norm:new Set(), grp:new Set(), saint:false, pogr:new Set(),
+  sort:'az', shown:200, view:'all', listMode:'all'});
+const S = Object.assign({letters:{}, ends:{}}, DEF());
 const PICKED = new Set();
+const LISTS = [];            // {id,label,ci,state,names:Set,missing:[{raw,near,cands}]}
+const MEMBER = new Map();    // canonical name -> [index into LISTS]
+const MAX_LISTS = 12, MAX_NAMES = 5000, MAX_BYTES = 4e6;
 
-// Selection storage: artifact store if present, else localStorage, else memory only.
-const KEY='lt-names-picked-v1';
+// ---- storage: artifact store if present, else localStorage, else memory only.
+const KEY='lt-names-picked-v1', LKEY='lt-names-lists-v1';
 const store = (()=>{
   const w = window.storage;
   if(w && typeof w.get==='function' && typeof w.set==='function') return {kind:'synced',
-    async load(){ try{ const r=await w.get(KEY); return r&&r.value?JSON.parse(r.value):[]; }catch{ return []; } },
-    async save(a){ try{ await w.set(KEY, JSON.stringify(a)); }catch{} }};
-  try{ const k='__probe'; localStorage.setItem(k,'1'); localStorage.removeItem(k);
+    async load(k){ try{ const r=await w.get(k); return r&&r.value?JSON.parse(r.value):null; }catch{ return null; } },
+    async save(k,v){ try{ await w.set(k, JSON.stringify(v)); return true; }catch{ return false; } }};
+  try{ const p='__probe'; localStorage.setItem(p,'1'); localStorage.removeItem(p);
     return {kind:'local',
-      async load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch{ return []; } },
-      async save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch{} }};
+      async load(k){ try{ const s=localStorage.getItem(k); return s?JSON.parse(s):null; }catch{ return null; } },
+      async save(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch{ return false; } }};
   }catch{}
-  let mem=[]; return {kind:'memory', async load(){return mem;}, async save(a){mem=a.slice();}};
+  const mem={}; return {kind:'memory', async load(k){return mem[k]??null;}, async save(k,v){mem[k]=v;return true;}};
 })();
-let saveTimer=null;
-function persist(){
-  clearTimeout(saveTimer);
-  saveTimer=setTimeout(()=>store.save([...PICKED]),250);
+const timers={};
+function persist(key, get){
+  clearTimeout(timers[key]);
+  timers[key]=setTimeout(async()=>{
+    if(!await store.save(key, get())) note('Could not save to this device — storage is full.');
+  },250);
+}
+const persistPicks = () => persist(KEY, ()=>[...PICKED]);
+const persistLists = () => persist(LKEY, ()=>LISTS.map(L=>
+  ({id:L.id, label:L.label, ci:L.ci, state:L.state, names:[...L.names],
+    fixed:L.fixed, missing:L.missing})));
+
+let noteTimer=null;
+function note(msg){
+  $('note').textContent = msg;
+  clearTimeout(noteTimer); noteTimer=setTimeout(()=>{$('note').textContent='';},4200);
 }
 
 function syllables(name, soften){
@@ -275,85 +486,404 @@ function tile(l){
   if(!charCount[l]) t.dataset.z='1';
   t.setAttribute('aria-label', l+', in '+(charCount[l]||0)+' names');
   t.innerHTML = `<span class="g">${l==='-'?'‑':l}</span><span class="c">${charCount[l]||0}</span>`;
-  const cycle=()=>{ S.letters[l]=(S.letters[l]+1)%3; if(S.letters[l]!==2) S.ends[l]=false; paint(); render(); };
+  const cycle=()=>{ S.letters[l]=(S.letters[l]+1)%3; if(S.letters[l]!==2) S.ends[l]=false; paint(); changed(); };
   t.addEventListener('click',cycle);
   t.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();cycle();} });
   return t;
 }
-SPECIAL.forEach(l=>document.getElementById('ltSpecial').appendChild(tile(l)));
-[...ALPHA,...EXTRA].forEach(l=>document.getElementById('ltPlain').appendChild(tile(l)));
+SPECIAL.forEach(l=>$('ltSpecial').appendChild(tile(l)));
+[...ALPHA,...EXTRA].forEach(l=>$('ltPlain').appendChild(tile(l)));
 
-function paint(){
-  document.querySelectorAll('.tile').forEach(t=>t.dataset.s=S.letters[t.dataset.l]);
-  const box=document.getElementById('rules'); box.innerHTML='';
-  LT.filter(l=>S.letters[l]).forEach(l=>{
-    const exc=S.letters[l]===2;
-    const r=document.createElement('div');
-    r.className='rule '+(exc?'exc':'req');
-    r.innerHTML=`<span class="l">${l==='-'?'‑':l}</span><span class="w">${exc?'excluded':'must appear'}</span><span class="sp"></span>`
-      + (exc?`<label><input type="checkbox" ${S.ends[l]?'checked':''}> ok at end</label>`:'')
-      + `<button class="x" title="Clear this rule" aria-label="Clear rule for ${l}">×</button>`;
-    const cb=r.querySelector('input');
-    if(cb) cb.addEventListener('change',e=>{S.ends[l]=e.target.checked;render();});
-    r.querySelector('.x').addEventListener('click',()=>{S.letters[l]=0;S.ends[l]=false;paint();render();});
-    box.appendChild(r);
-  });
-}
+function paint(){ document.querySelectorAll('.tile').forEach(t=>t.dataset.s=S.letters[t.dataset.l]); }
 document.querySelectorAll('.quick button').forEach(b=>b.addEventListener('click',()=>{
   const q=b.dataset.q;
   if(q==='clear') LT.forEach(l=>{S.letters[l]=0;S.ends[l]=false;});
   else SPECIAL.forEach(l=>{S.letters[l]=2;S.ends[l]=(q==='endspec');});
-  paint(); render();
+  paint(); changed();
 }));
 
 function chipGroup(id, items, onPick){
-  const el=document.getElementById(id);
+  const el=$(id);
   items.forEach(([val,label])=>{
     const b=document.createElement('button');
-    b.className='chip'; b.textContent=label; b.setAttribute('aria-pressed','false');
+    b.className='chip'; b.textContent=label; b.dataset.v=val; b.setAttribute('aria-pressed','false');
     b.addEventListener('click',()=>onPick(val,b,el)); el.appendChild(b);
   });
 }
-S.genderPicked = null;
-chipGroup('gender',[[1,'Women'],[2,'Men'],[0,'Unknown']],(v,b,el)=>{
+const GENDERS=[[1,'Women'],[2,'Men'],[0,'Unknown']];
+const NORMS=[[1,'Recommended'],[2,'Discouraged'],[3,'Not recommended'],[0,'Uncatalogued']];
+const GROUPS=[[1,'Baltic'],[2,'Foreign'],[0,'Unclassified']];
+const labelOf=(items,v)=>(items.find(p=>p[0]===v)||[,''])[1];
+chipGroup('gender',GENDERS,(v,b,el)=>{
   const was = S.genderPicked === v;
   el.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed','false'));
   S.genderPicked = was ? null : v;
   if(!was) b.setAttribute('aria-pressed','true');
-  render();
+  changed();
 });
-chipGroup('norm',[[1,'Recommended'],[2,'Discouraged'],[3,'Not recommended'],[0,'Uncatalogued']],(v,b)=>{
+chipGroup('norm',NORMS,(v,b)=>{
   S.norm.has(v)?S.norm.delete(v):S.norm.add(v);
-  b.setAttribute('aria-pressed', S.norm.has(v)); render();
+  b.setAttribute('aria-pressed', S.norm.has(v)); changed();
 });
-chipGroup('grp',[[1,'Baltic'],[2,'Foreign'],[0,'Unclassified']],(v,b)=>{
+chipGroup('grp',GROUPS,(v,b)=>{
   S.grp.has(v)?S.grp.delete(v):S.grp.add(v);
-  b.setAttribute('aria-pressed', S.grp.has(v)); render();
+  b.setAttribute('aria-pressed', S.grp.has(v)); changed();
 });
 
 const counts = D.pogr.map(()=>0);
 ROWS.forEach(r=>r[5].forEach(i=>counts[i]++));
-const elP = document.getElementById('pogr');
+const elP = $('pogr');
 D.pogr.map((name,i)=>[name,i]).sort((a,b)=>counts[b[1]]-counts[a[1]]).forEach(([name,i])=>{
   const lab=document.createElement('label');
-  lab.innerHTML=`<input type="checkbox" value="${i}"><span>${name}</span><span class="n">${counts[i]}</span>`;
+  lab.innerHTML=`<input type="checkbox" value="${i}"><span>${esc(name)}</span><span class="n">${counts[i]}</span>`;
   lab.querySelector('input').addEventListener('change',e=>{
-    e.target.checked?S.pogr.add(i):S.pogr.delete(i); render();
+    e.target.checked?S.pogr.add(i):S.pogr.delete(i); changed();
   });
   elP.appendChild(lab);
 });
 
-const bind=(id,key,fn)=>{const e=document.getElementById(id);
-  e.addEventListener(e.type==='checkbox'||e.tagName==='SELECT'?'change':'input',()=>{S[key]=fn(e);S.shown=200;render();});};
+const bind=(id,key,fn)=>{const e=$(id);
+  e.addEventListener(e.type==='checkbox'||e.tagName==='SELECT'?'change':'input',()=>{S[key]=fn(e);changed();});};
 bind('smin','smin',e=>+e.value||1); bind('smax','smax',e=>+e.value||9);
 bind('lmin','lmin',e=>+e.value||1); bind('lmax','lmax',e=>+e.value||30);
-document.getElementById('soften').addEventListener('change',e=>{S.soften=e.target.checked;render();});
-document.getElementById('mode').addEventListener('change',e=>{S.mode=e.target.value;render();});
-document.getElementById('q').addEventListener('input',e=>{S.q=e.target.value.trim().toLowerCase();S.shown=200;render();});
-document.getElementById('saint').addEventListener('change',e=>{S.saint=e.target.checked;render();});
-document.getElementById('sort').addEventListener('change',e=>{S.sort=e.target.value;render();});
-document.getElementById('more').addEventListener('click',()=>{S.shown+=400;render();});
-document.getElementById('reset').addEventListener('click',()=>location.reload());
+$('soften').addEventListener('change',e=>{S.soften=e.target.checked;changed();});
+$('mode').addEventListener('change',e=>{S.mode=e.target.value;changed();});
+$('q').addEventListener('input',e=>{S.q=e.target.value.trim().toLowerCase();changed();});
+$('saint').addEventListener('change',e=>{S.saint=e.target.checked;changed();});
+$('sort').addEventListener('change',e=>{S.sort=e.target.value;render();});
+$('more').addEventListener('click',()=>{S.shown+=400;render();});
+$('reset').addEventListener('click',resetAll);
+$('toTop').addEventListener('click',()=>scrollTo({top:0,behavior:'smooth'}));
+
+// Push S back into every control, so a chip's × and Clear all need only touch state.
+function syncControls(){
+  $('smin').value=S.smin; $('smax').value=S.smax;
+  $('lmin').value=S.lmin; $('lmax').value=S.lmax;
+  $('soften').checked=S.soften; $('mode').value=S.mode; $('q').value=S.q;
+  $('saint').checked=S.saint; $('sort').value=S.sort;
+  $('gender').querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed', +c.dataset.v===S.genderPicked));
+  $('norm').querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed', S.norm.has(+c.dataset.v)));
+  $('grp').querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed', S.grp.has(+c.dataset.v)));
+  elP.querySelectorAll('input').forEach(i=>i.checked=S.pogr.has(+i.value));
+  paint();
+}
+function changed(){ S.shown=200; render(); }
+function resetAll(){
+  Object.assign(S, DEF());
+  LT.forEach(l=>{S.letters[l]=0; S.ends[l]=false;});
+  LISTS.forEach(L=>L.state=0);          // keeps the lists themselves, and the picks
+  syncControls(); paintLists(); render();
+}
+
+// ---- importing lists
+function sniffDelim(line){
+  let best=',', most=-1;
+  for(const d of [',',';','\t']){
+    let n=0, q=false;
+    for(const ch of line){ if(ch==='"') q=!q; else if(ch===d && !q) n++; }
+    if(n>most){most=n;best=d;}
+  }
+  return best;
+}
+function parseCSV(text){
+  const d = sniffDelim(text.split(/\r?\n/,1)[0]||'');
+  const rows=[]; let row=[], f='', q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){
+      if(c!=='"'){ f+=c; }
+      else if(text[i+1]==='"'){ f+='"'; i++; }
+      else q=false;
+      continue;
+    }
+    if(c==='"') q=true;
+    else if(c===d){ row.push(f); f=''; }
+    else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=''; }
+    else if(c!=='\r') f+=c;
+  }
+  if(f!=='' || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+const TRUTHY=/^(yes|y|true|1|taip|x)$/i;
+function labelFrom(filename){
+  const stem=(filename||'').replace(/\.[^.]+$/,'');
+  if(/^lithuanian-names-picked/.test(stem)) return 'Picked names';
+  if(/^lithuanian-names-filtered/.test(stem)) return 'Filtered names';
+  return stem.replace(/[-_]+/g,' ').trim().slice(0,60) || 'Imported list';
+}
+// Reads what this page exports (CSV, copied text) plus hand-made JSON and plain lists.
+function parseImport(text, filename){
+  const t = text.replace(/^\ufeff/,'').trim();
+  let label = labelFrom(filename), raw = null;
+  if(/^[[{]/.test(t)){
+    try{
+      const j = JSON.parse(t);
+      const arr = Array.isArray(j) ? j : (Array.isArray(j.names) ? j.names : null);
+      if(arr){
+        if(!Array.isArray(j) && j.label) label = String(j.label);
+        raw = arr.map(v => typeof v==='string' ? v : (v && v.name) || '');
+      }
+    }catch{ /* a .json that is not JSON falls through to the text branches */ }
+  }
+  if(raw===null && (/\.csv$/i.test(filename||'') || /[,;\t]/.test(t.split(/\r?\n/,1)[0]||''))){
+    const rows = parseCSV(t);
+    const head = (rows[0]||[]).map(h=>h.trim().toLowerCase());
+    let ni = head.indexOf('name');
+    if(ni<0) ni = head.findIndex(h=>h==='vardas'||h.includes('name'));
+    const hasHead = ni>=0;
+    const body = hasHead ? rows.slice(1) : rows;
+    if(!hasHead) ni = 0;
+    const pi = hasHead ? head.indexOf('picked') : -1;
+    // An export from the Matches tab holds the whole filtered set with the shortlist
+    // flagged; that flag is the selection, so honour it when it is actually used.
+    const marked = pi>=0 && body.some(r=>TRUTHY.test((r[pi]||'').trim()));
+    raw = (marked ? body.filter(r=>TRUTHY.test((r[pi]||'').trim())) : body).map(r=>(r[ni]||'').trim());
+    // what came out is the shortlist, whichever tab the file was exported from
+    if(marked && /^lithuanian-names-/.test(filename||'')) label = 'Picked names';
+  }
+  if(raw===null) raw = t.split(/\r?\n/);
+  const seen=new Set(); const out=[];
+  for(let v of raw){
+    v = String(v).trim().replace(/^"(.*)"$/,'$1').trim();
+    if(!v || v.startsWith('#')) continue;
+    const k=v.toLowerCase(); if(seen.has(k)) continue;
+    seen.add(k); out.push(v);
+  }
+  return {label, raw:out};
+}
+function resolveNames(raw){
+  const names=new Set(), fixed=[], missing=[];
+  for(const r of raw){
+    const hit = BYNAME.get(r.toLowerCase());
+    if(hit){ names.add(hit); continue; }
+    const cand = BYFOLD.get(fold(r)) || [];
+    // One folded candidate and no exact name of its own: the spelling is unambiguous,
+    // so take it and say so. Several candidates: only the reader can choose.
+    if(cand.length===1){ names.add(cand[0]); fixed.push({raw:r, to:cand[0]}); }
+    else missing.push({raw:r, cands: cand.slice(0,4)});
+  }
+  return {names, fixed, missing};
+}
+function freeColor(){
+  const used=new Set(LISTS.map(L=>L.ci));
+  for(let i=0;i<8;i++) if(!used.has(i)) return i;
+  return LISTS.length%8;
+}
+let seq=0;
+function addList(label, raw){
+  if(LISTS.length>=MAX_LISTS){ note(`Only ${MAX_LISTS} lists at a time — remove one first.`); return null; }
+  if(raw.length>MAX_NAMES){ note(`${esc(label)} was cut to the first ${MAX_NAMES} names.`); raw=raw.slice(0,MAX_NAMES); }
+  const {names,fixed,missing} = resolveNames(raw);
+  const L = {id:'L'+(++seq), label:String(label).slice(0,60)||'Imported list',
+             ci:freeColor(), state:1, names, fixed, missing};
+  LISTS.push(L);
+  return L;
+}
+function afterListChange(){
+  indexLists(); paintLists(); syncSortOptions(); persistLists(); changed();
+}
+function indexLists(){
+  MEMBER.clear();
+  LISTS.forEach((L,i)=>L.names.forEach(n=>{
+    const a=MEMBER.get(n); if(a) a.push(i); else MEMBER.set(n,[i]);
+  }));
+}
+const nLists = n => (MEMBER.get(n)||[]).length;
+function addFromText(text, filename){
+  const {label, raw} = parseImport(text, filename);
+  if(!raw.length){ note(`No names found in ${esc(labelFrom(filename))}.`); return null; }
+  const L = addList(label, raw);
+  if(L) note(`${L.label}: ${L.names.size} of ${raw.length} names matched the register.`);
+  return L;
+}
+const readText = f => f.text ? f.text() : new Promise((res,rej)=>{
+  const fr=new FileReader(); fr.onload=()=>res(String(fr.result)); fr.onerror=rej;
+  fr.readAsText(f,'utf-8');
+});
+async function importFiles(files){
+  let added=0;
+  for(const f of [...files]){
+    if(f.size>MAX_BYTES){ note(`${f.name} is too large to import.`); continue; }
+    let text;
+    try{ text = await readText(f); }catch{ note(`Could not read ${f.name}.`); continue; }
+    if(addFromText(text, f.name)) added++;
+  }
+  if(added) afterListChange();
+}
+$('fileIn').addEventListener('change',e=>{ importFiles(e.target.files); e.target.value=''; });
+$('importBtn').addEventListener('click',()=>$('fileIn').click());
+$('importBtn2').addEventListener('click',()=>$('fileIn').click());
+$('pasteAdd').addEventListener('click',()=>{
+  const t=$('paste').value.trim();
+  if(!t){ note('Paste some names first — one per line.'); return; }
+  if(addFromText(t,'Pasted list')){ $('paste').value=''; afterListChange(); }
+});
+$('listClear').addEventListener('click',()=>{
+  if(!LISTS.length || !confirm('Remove every imported list?')) return;
+  LISTS.length=0; afterListChange();
+});
+
+// page-wide drag and drop
+let dragDepth=0;
+const hasFiles = e => !!e.dataTransfer && [...e.dataTransfer.types||[]].includes('Files');
+addEventListener('dragenter',e=>{ if(!hasFiles(e))return; e.preventDefault();
+  if(++dragDepth===1) $('dropveil').hidden=false; });
+addEventListener('dragover',e=>{ if(!hasFiles(e))return; e.preventDefault(); e.dataTransfer.dropEffect='copy'; });
+addEventListener('dragleave',e=>{ if(!hasFiles(e))return; if(--dragDepth<=0){dragDepth=0;$('dropveil').hidden=true;} });
+addEventListener('drop',e=>{ if(!hasFiles(e))return; e.preventDefault();
+  dragDepth=0; $('dropveil').hidden=true; importFiles(e.dataTransfer.files); });
+
+const STATES=[['0','any'],['1','must be in'],['2','exclude']];
+function paintLists(){
+  const box=$('lists'); box.innerHTML='';
+  LISTS.forEach((L,i)=>{
+    const card=document.createElement('div');
+    card.className='lcard c'+L.ci+(L.state?' on':'');
+    const head=document.createElement('div'); head.className='lhead';
+    const sw=document.createElement('span'); sw.className='sw';
+    const inp=document.createElement('input');
+    inp.className='llabel'; inp.value=L.label; inp.maxLength=60;
+    inp.setAttribute('aria-label','Name of imported list '+(i+1));
+    inp.addEventListener('input',()=>{ L.label=inp.value.slice(0,60); persistLists(); paintActive(); render(); });
+    const x=document.createElement('button');
+    x.className='lx'; x.title='Remove this list'; x.setAttribute('aria-label','Remove list '+L.label);
+    x.textContent='×';
+    x.addEventListener('click',()=>{ LISTS.splice(i,1); afterListChange(); });
+    head.append(sw,inp,x);
+
+    const foot=document.createElement('div'); foot.className='lfoot';
+    const seg=document.createElement('div'); seg.className='seg';
+    STATES.forEach(([v,lab])=>{
+      const b=document.createElement('button');
+      b.textContent=lab; b.setAttribute('aria-pressed', String(L.state)===v);
+      b.addEventListener('click',()=>{ L.state=+v; paintLists(); persistLists(); changed(); });
+      seg.appendChild(b);
+    });
+    const num=document.createElement('span'); num.className='lnum';
+    num.textContent=L.names.size.toLocaleString('en-US')+' name'+(L.names.size===1?'':'s');
+    foot.append(seg,num);
+    card.append(head,foot);
+
+    const parts=[];
+    if(L.fixed.length) parts.push(L.fixed.length+' spelling'+(L.fixed.length===1?'':'s')+' corrected');
+    if(L.missing.length) parts.push(L.missing.length+' not in the register');
+    if(parts.length){
+      const det=document.createElement('details'); det.className='miss';
+      const sum=document.createElement('summary'); sum.textContent=parts.join(' · ');
+      const body=document.createElement('div'); body.className='body';
+      body.innerHTML = L.fixed.map(m=>`${esc(m.raw)} → <b>${esc(m.to)}</b>`)
+        .concat(L.missing.map((m,mi)=>
+          m.cands.length
+            ? `${esc(m.raw)} — ` + m.cands.map(c=>
+                `<button class="fix" data-li="${i}" data-mi="${mi}" data-name="${esc(c)}"><b>${esc(c)}</b></button>`).join(' or ') + '?'
+            : esc(m.raw)))
+        .join('<br>');
+      det.append(sum,body); card.appendChild(det);
+    }
+    box.appendChild(card);
+  });
+
+  if(LISTS.filter(L=>L.state===1).length>1){
+    const row=document.createElement('div'); row.className='row'; row.style.marginTop='var(--s2)';
+    const lab=document.createElement('label'); lab.textContent='Names must be in';
+    const seg=document.createElement('div'); seg.className='seg';
+    [['all','every list'],['any','any list']].forEach(([v,t])=>{
+      const b=document.createElement('button');
+      b.textContent=t; b.setAttribute('aria-pressed', S.listMode===v);
+      b.addEventListener('click',()=>{ S.listMode=v; paintLists(); changed(); });
+      seg.appendChild(b);
+    });
+    row.append(lab,seg); box.appendChild(row);
+  }
+  $('listClear').hidden = !LISTS.length;
+  $('importBtn').textContent = LISTS.length
+    ? 'Import another list' : 'Import a list — drop a file anywhere, or browse';
+}
+// Accepting a suggested spelling: only ever a name the register already holds.
+$('lists').addEventListener('click',e=>{
+  const b=e.target.closest('.fix'); if(!b) return;
+  const L=LISTS[+b.dataset.li]; if(!L) return;
+  const canonical=BYNAME.get(String(b.dataset.name).toLowerCase());
+  if(!canonical) return;
+  L.names.add(canonical);
+  L.missing.splice(+b.dataset.mi,1);
+  afterListChange();
+});
+function syncSortOptions(){
+  const sel=$('sort');
+  let opt=sel.querySelector('option[value="lists"]');
+  if(LISTS.length && !opt){
+    opt=document.createElement('option'); opt.value='lists'; opt.textContent='in most lists';
+    sel.appendChild(opt);
+  } else if(!LISTS.length && opt){
+    opt.remove();
+    if(S.sort==='lists'){ S.sort='az'; sel.value='az'; }
+  }
+}
+
+// ---- active filters, shown above the results so they stay visible with the sheet closed
+function activeFilters(){
+  const f=[];
+  LT.filter(l=>S.letters[l]).forEach(l=>{
+    const exc=S.letters[l]===2;
+    f.push({tone:exc?'exc':'req', glyph:l==='-'?'‑':l, text:exc?'excluded':'must appear',
+      sub: exc ? {label:'ok at end', on:S.ends[l], toggle(){S.ends[l]=!S.ends[l];}} : null,
+      clear(){S.letters[l]=0;S.ends[l]=false;}});
+  });
+  if(S.smin!==1||S.smax!==9) f.push({tone:'req', text:`${S.smin}–${S.smax} syllables`,
+    clear(){S.smin=1;S.smax=9;}});
+  if(S.lmin!==1||S.lmax!==30) f.push({tone:'req', text:`${S.lmin}–${S.lmax} letters`,
+    clear(){S.lmin=1;S.lmax=30;}});
+  if(S.q) f.push({tone:'req', text:`${$('mode').selectedOptions[0].textContent} “${S.q}”`,
+    clear(){S.q='';}});
+  if(S.genderPicked!=null) f.push({tone:'req', text:labelOf(GENDERS,S.genderPicked),
+    clear(){S.genderPicked=null;}});
+  [...S.norm].forEach(v=>f.push({tone:'req', text:labelOf(NORMS,v), clear(){S.norm.delete(v);}}));
+  [...S.grp].forEach(v=>f.push({tone:'req', text:labelOf(GROUPS,v), clear(){S.grp.delete(v);}}));
+  if(S.saint) f.push({tone:'req', text:'saint’s name', clear(){S.saint=false;}});
+  [...S.pogr].forEach(v=>f.push({tone:'req', text:D.pogr[v], clear(){S.pogr.delete(v);}}));
+  LISTS.forEach(L=>{ if(L.state) f.push({tone:'lst', ci:L.ci,
+    text:(L.state===1?'in ':'not in ')+L.label, clear(){L.state=0;}}); });
+  return f;
+}
+function paintActive(){
+  const box=$('active'); box.innerHTML='';
+  const list=activeFilters();
+  list.forEach(f=>{
+    const c=document.createElement('span');
+    c.className='fchip '+f.tone+(f.ci!=null?' c'+f.ci:'');
+    if(f.glyph){ const g=document.createElement('span'); g.className='l'; g.textContent=f.glyph; c.appendChild(g); }
+    const tx=document.createElement('span'); tx.className='tx'; tx.textContent=f.text; c.appendChild(tx);
+    if(f.sub){
+      const s=document.createElement('button');
+      s.className='sub'; s.textContent=f.sub.label; s.setAttribute('aria-pressed',f.sub.on);
+      s.addEventListener('click',()=>{ f.sub.toggle(); changed(); });
+      c.appendChild(s);
+    }
+    const x=document.createElement('button');
+    x.className='x'; x.textContent='×'; x.title='Clear this filter';
+    x.setAttribute('aria-label','Clear filter: '+f.text);
+    x.addEventListener('click',()=>{ f.clear(); syncControls(); paintLists(); changed(); });
+    c.appendChild(x);
+    box.appendChild(c);
+  });
+  if(LISTS.filter(L=>L.state===1).length>1){
+    const m=document.createElement('button');
+    m.className='fchip mode';
+    m.textContent = S.listMode==='all' ? 'in every list' : 'in any list';
+    m.title='Switch between names in every required list and names in any of them';
+    m.addEventListener('click',()=>{ S.listMode = S.listMode==='all'?'any':'all'; paintLists(); changed(); });
+    box.appendChild(m);
+  }
+  if(list.length){
+    const c=document.createElement('button');
+    c.className='clearall'; c.textContent='Clear all';
+    c.addEventListener('click',resetAll);
+    box.appendChild(c);
+  }
+  const n=list.length;
+  $('fcount').textContent=n; $('fcount').hidden=!n;
+}
 
 // ---- filtering
 function letterOk(lower){
@@ -370,9 +900,18 @@ function letterOk(lower){
   }
   return true;
 }
+let LF={req:[],exc:[],all:true};
+function listFilter(){
+  LF={req:LISTS.filter(L=>L.state===1), exc:LISTS.filter(L=>L.state===2), all:S.listMode==='all'};
+}
 function match(r){
   const name=r[0], lower=name.toLowerCase();
   if(S.genderPicked!=null && r[1]!==S.genderPicked) return false;
+  for(const L of LF.exc) if(L.names.has(name)) return false;
+  if(LF.req.length){
+    let hits=0; for(const L of LF.req) if(L.names.has(name)) hits++;
+    if(LF.all ? hits<LF.req.length : hits===0) return false;
+  }
   if(S.norm.size && !S.norm.has(r[2])) return false;
   if(S.saint && !r[3]) return false;
   if(S.grp.size){ const g=r[4].length?r[4]:[0]; if(!g.some(x=>S.grp.has(x))) return false; }
@@ -397,6 +936,7 @@ function order(arr){
   if(S.sort==='syl') a.sort((x,y)=>syl(x[0])-syl(y[0]) || x[0].localeCompare(y[0],'lt'));
   else if(S.sort==='len') a.sort((x,y)=>[...x[0]].length-[...y[0]].length || x[0].localeCompare(y[0],'lt'));
   else if(S.sort==='pop') a.sort((x,y)=>y[7]-x[7] || x[0].localeCompare(y[0],'lt'));
+  else if(S.sort==='lists') a.sort((x,y)=>nLists(y[0])-nLists(x[0]) || x[0].localeCompare(y[0],'lt'));
   else a.sort((x,y)=>x[0].localeCompare(y[0],'lt'));
   return a;
 }
@@ -404,26 +944,41 @@ function row(r){
   const bits=[]; if(GENLBL[r[1]]) bits.push(GENLBL[r[1]]);
   bits.push(r[2]===1?'recommended':(r[2]===0?'uncatalogued':`<span class="w">${NORMLBL[r[2]]}</span>`));
   if(r[3]) bits.push('saint');
-  if(r[5].length) bits.push(D.pogr[r[5][0]]);
+  if(r[5].length) bits.push(esc(D.pogr[r[5][0]]));
   const on=PICKED.has(r[0])?'1':'0';
-  return `<li data-on="${on}" data-name="${r[0]}">`
-    + `<button class="pick" aria-label="Pick ${r[0]}" aria-pressed="${on==='1'}"></button>`
-    + `<span class="name">${r[0]}</span><span class="syl">${syl(r[0])}</span>`
+  const name=esc(r[0]);
+  const ids=MEMBER.get(r[0]);
+  let dots='';
+  if(ids){
+    const labels=ids.map(i=>LISTS[i].label).join(', ');
+    dots = `<span class="dots" aria-label="In ${esc(labels)}">` + ids.map(i=>{
+      const t=esc(LISTS[i].label);
+      return `<button type="button" class="dot c${LISTS[i].ci}" data-li="${i}" title="${t}" aria-label="Filter to ${t}"></button>`;
+    }).join('') + '</span>';
+  }
+  return `<li data-on="${on}" data-name="${name}">`
+    + `<button class="pick" aria-label="Pick ${name}" aria-pressed="${on==='1'}"></button>`
+    + `<span class="hd"><span class="name">${name}</span><span class="syl">${syl(r[0])}</span>${dots}</span>`
     + `<span class="meta">${bits.join(' · ')}</span></li>`;
 }
 function render(){
+  listFilter();
   matches = order(ROWS.filter(match));
   listed = S.view==='sel' ? order(ROWS.filter(r=>PICKED.has(r[0]))) : matches;
 
-  document.getElementById('n').textContent = matches.length.toLocaleString('en-US');
-  document.getElementById('selN').textContent = PICKED.size;
+  const total=matches.length.toLocaleString('en-US');
+  $('n').textContent=total; $('n2').textContent=total;
+  $('selN').textContent = PICKED.size;
   document.querySelectorAll('#view button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===S.view));
+  paintActive();
 
-  const out=document.getElementById('out'), more=document.getElementById('more');
+  const out=$('out'), more=$('more');
   if(!listed.length){
-    out.innerHTML = S.view==='sel'
-      ? '<li class="empty">Nothing picked yet. Tap the circle beside a name to keep it.</li>'
-      : '<li class="empty">No name fits these rules. Loosen a letter rule or widen the syllable range.</li>';
+    let msg;
+    if(S.view==='sel') msg='Nothing picked yet. Tap the circle beside a name to keep it.';
+    else if(LF.req.length>1 && LF.all) msg='No name is in <b>every</b> required list. Switch the lists to “in any list”, or set one back to “any”.';
+    else msg='No name fits these rules. Loosen a letter rule or widen the syllable range.';
+    out.innerHTML = `<li class="empty">${msg}</li>`;
     more.hidden=true; return;
   }
   out.innerHTML = listed.slice(0,S.shown).map(row).join('');
@@ -434,38 +989,42 @@ function render(){
 // ---- picking
 function toggle(name){
   PICKED.has(name)?PICKED.delete(name):PICKED.add(name);
-  persist();
+  persistPicks();
   const li=document.querySelector(`#out li[data-name="${CSS.escape(name)}"]`);
   if(li && S.view==='all'){
     const on=PICKED.has(name);
     li.dataset.on=on?'1':'0';
     li.querySelector('.pick').setAttribute('aria-pressed',on);
-    document.getElementById('selN').textContent=PICKED.size;
+    $('selN').textContent=PICKED.size;
   } else render();
 }
-document.getElementById('out').addEventListener('click',e=>{
+$('out').addEventListener('click',e=>{
+  const dot=e.target.closest('.dot');
+  if(dot){ const L=LISTS[+dot.dataset.li];
+    if(L){ L.state = L.state===1?0:1; paintLists(); persistLists(); changed(); }
+    return; }
   const li=e.target.closest('li[data-name]'); if(li) toggle(li.dataset.name);
 });
 document.querySelectorAll('#view button').forEach(b=>b.addEventListener('click',()=>{
   S.view=b.dataset.v; S.shown=200; render();
 }));
-document.getElementById('pickAll').addEventListener('click',()=>{
-  matches.forEach(r=>PICKED.add(r[0])); persist(); render();
+$('pickAll').addEventListener('click',()=>{
+  matches.forEach(r=>PICKED.add(r[0])); persistPicks(); render();
 });
-document.getElementById('pickNone').addEventListener('click',()=>{
+$('pickNone').addEventListener('click',()=>{
   if(S.view==='sel' || !matches.length) PICKED.clear();
   else matches.forEach(r=>PICKED.delete(r[0]));
-  persist(); render();
+  persistPicks(); render();
 });
 
 // ---- export (acts on whatever the list is showing)
-document.getElementById('copy').addEventListener('click',async e=>{
+$('copy').addEventListener('click',async e=>{
   const t=listed.map(r=>r[0]).join('\n');
   try{ await navigator.clipboard.writeText(t); e.target.textContent='Copied'; }
   catch{ e.target.textContent='Blocked'; }
   setTimeout(()=>e.target.textContent='Copy',1400);
 });
-document.getElementById('csv').addEventListener('click',()=>{
+$('csv').addEventListener('click',()=>{
   const head='name,syllables,letters,gender,verdict,saint,picked,origin_groups,origin_category\n';
   const G={0:'',1:'Moteris',2:'Vyras'}, N={0:'',1:'Teiktinas',2:'Vengtinas',3:'Neteiktinas'}, GR={1:'Baltiska',2:'Svetima'};
   const body=listed.map(r=>[r[0],syl(r[0]),[...r[0]].length,G[r[1]],N[r[2]],r[3]?'yes':'no',
@@ -473,16 +1032,67 @@ document.getElementById('csv').addEventListener('click',()=>{
     .map(v=>/[",;\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\n');
   const blob=new Blob(['\ufeff'+head+body],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download = (S.view==='sel'?'lithuanian-names-picked.csv':'lithuanian-names-filtered.csv');
+  const d=new Date(), pad=x=>String(x).padStart(2,'0');
+  const stamp=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  a.download = `lithuanian-names-${S.view==='sel'?'picked':'filtered'}-${stamp}.csv`;
   a.click(); URL.revokeObjectURL(a.href);
 });
 
-document.getElementById('savenote').textContent = store.kind==='memory'
-  ? 'Picks are held for this session only — this browser is blocking storage. Download the page and open it locally to keep them.'
-  : 'Picks are saved on this device and come back when you reload.';
+// ---- filter sheet (mobile) and the actions menu
+let sheetOpener=null;
+function sheet(on){
+  document.body.dataset.sheet = on ? '1' : '';
+  $('veil').hidden = !on;
+  $('sheetOpen').setAttribute('aria-expanded', on);
+  document.querySelector('.results').setAttribute('aria-hidden', on ? 'true' : 'false');
+  // the panel is visibility:hidden until the style recalc lands, so focus on the next frame
+  if(on){ sheetOpener=document.activeElement; requestAnimationFrame(()=>$('sheetClose').focus()); }
+  else if(sheetOpener){ sheetOpener.focus(); sheetOpener=null; }
+}
+$('sheetOpen').addEventListener('click',()=>sheet(true));
+$('sheetClose').addEventListener('click',()=>sheet(false));
+$('veil').addEventListener('click',()=>sheet(false));
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(document.body.dataset.sheet==='1') sheet(false);
+  if($('menu').open) $('menu').open=false;
+});
+addEventListener('resize',()=>{ if(innerWidth>=940 && document.body.dataset.sheet==='1') sheet(false); });
+addEventListener('click',e=>{ if($('menu').open && !$('menu').contains(e.target)) $('menu').open=false; });
+$('menu').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{$('menu').open=false;}));
 
-paint();
-store.load().then(a=>{ (a||[]).forEach(n=>PICKED.add(n)); render(); });
+// ---- boot
+$('savenote').textContent = store.kind==='memory'
+  ? 'Picks and imported lists are held for this session only — this browser is blocking storage. Download the page and open it locally to keep them.'
+  : 'Picks and imported lists are saved on this device and come back when you reload.';
+
+// Stored lists are input like any other: re-resolve every name and clamp every field.
+function hydrateLists(saved){
+  if(!Array.isArray(saved)) return;
+  saved.slice(0,MAX_LISTS).forEach(o=>{
+    if(!o || typeof o!=='object') return;
+    const names=new Set();
+    (Array.isArray(o.names)?o.names:[]).slice(0,MAX_NAMES).forEach(n=>{
+      const hit=BYNAME.get(String(n).toLowerCase()); if(hit) names.add(hit);
+    });
+    const missing=(Array.isArray(o.missing)?o.missing:[]).slice(0,MAX_NAMES)
+      .filter(m=>m&&typeof m.raw==='string')
+      .map(m=>({raw:String(m.raw).slice(0,80),
+                cands: (Array.isArray(m.cands)?m.cands:[]).filter(c=>typeof c==='string' && BYNAME.has(c.toLowerCase())).slice(0,4)}));
+    const fixed=(Array.isArray(o.fixed)?o.fixed:[]).slice(0,MAX_NAMES)
+      .filter(m=>m&&typeof m.raw==='string'&&typeof m.to==='string'&&BYNAME.has(m.to.toLowerCase()))
+      .map(m=>({raw:String(m.raw).slice(0,80), to:BYNAME.get(m.to.toLowerCase())}));
+    if(!names.size && !missing.length) return;
+    LISTS.push({id:'L'+(++seq), label:String(o.label||'Imported list').slice(0,60),
+      ci: Number.isInteger(o.ci) && o.ci>=0 && o.ci<8 ? o.ci : freeColor(),
+      state: [0,1,2].includes(o.state) ? o.state : 0, names, fixed, missing});
+  });
+}
+Promise.all([store.load(KEY), store.load(LKEY)]).then(([picks, lists])=>{
+  (Array.isArray(picks)?picks:[]).forEach(n=>PICKED.add(n));
+  hydrateLists(lists);
+  indexLists(); syncSortOptions(); paintLists(); paint(); render();
+});
 </script>
 </body>
 </html>
