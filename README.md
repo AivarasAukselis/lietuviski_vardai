@@ -6,8 +6,9 @@ not contain, and by the register's own metadata — then shortlist the names you
 like, export them, and load someone else's shortlist back in to see which names
 you agree on.
 
-No build step, no dependencies, no network calls. `index.html` contains the
-dataset and runs offline.
+No build step, no dependencies. `index.html` contains the dataset and runs
+offline; the only network use is the optional live sharing below, and only once
+someone shares or opens a share link.
 
 ## What it does
 
@@ -66,6 +67,15 @@ someone's list. Corrections are reported (`Agate → Agatė`), ambiguous spellin
 offer the candidates as buttons, and anything unrecognised is listed rather than
 dropped.
 
+**Live sharing.** *More → Share picks live…* gives you a link to your
+shortlist that stays current: whoever opens it gets your picks as a coloured
+list, and every pick or unpick you make reaches them within a second or so, no
+reload needed. The list is read-only for them; they can filter by it, rename it
+on their side, or remove it. *Stop sharing* deletes the shared copy and the link
+stops working; people who had it keep the last names they received. This needs
+a free Firebase project (see below) — until one is configured the option is
+hidden and the page makes no network requests.
+
 ## Publishing it
 
 The page is static, so GitHub Pages serves it as-is:
@@ -75,6 +85,33 @@ The page is static, so GitHub Pages serves it as-is:
 3. It goes live at `https://<user>.github.io/<repo>/` within a minute or two.
 
 `index.html` is the whole application. Everything else is provenance.
+
+## Setting up live sharing
+
+GitHub Pages only serves files, so the shared lists are kept in a Firebase
+Realtime Database that the page talks to directly. The free Spark plan is ample.
+
+1. In the [Firebase console](https://console.firebase.google.com/) create a
+   project, then *Add app → Web*. Copy the `firebaseConfig` object it shows.
+2. *Build → Authentication → Get started → Sign-in method*: enable
+   **Anonymous**. Under *Settings → Authorized domains*, add `<user>.github.io`.
+3. *Build → Realtime Database → Create database* (locked mode is fine). On the
+   *Rules* tab, replace everything with the contents of `database.rules.json`
+   and publish.
+4. In `template.html`, put the values from step 1 into `FIREBASE_CONFIG`,
+   including `databaseURL` (shown at the top of the Realtime Database *Data* tab),
+   run `python build.py`, and push. Sharing stays switched off until
+   `databaseURL` is a real `https://` URL.
+
+The config is not a secret — it only identifies the project; the rules are what
+protect the data. They allow anyone with a link to read that one list, nobody to
+list or discover other lists, and only the browser that created a list to change
+or delete it. Each list is a label, the picked names and a timestamp; nothing
+else is stored.
+
+That ownership is the anonymous sign-in Firebase keeps in the browser. If the
+owner clears their site data, that browser can no longer update the list — choose
+*Stop sharing* (it forgets the link locally) and share again for a new link.
 
 ## Rebuilding from source data
 
