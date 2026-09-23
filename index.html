@@ -117,6 +117,9 @@ textarea{width:100%;resize:vertical;font-size:var(--sm);line-height:1.4}
 .lx:hover{color:var(--no)}
 .lfoot{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s2);flex-wrap:wrap}
 .lnum{font-size:var(--xs);color:var(--muted)}
+.lstat{font-size:var(--xs);color:var(--muted);margin-top:var(--s1)}
+.lstat.on::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--yes);margin-right:5px;vertical-align:1px}
 .miss{font-size:var(--xs);color:var(--muted);margin-top:var(--s1)}
 .miss summary{cursor:pointer;color:var(--no)}
 .miss .body{padding:var(--s1) 0 0;line-height:1.6}
@@ -155,6 +158,12 @@ textarea{width:100%;resize:vertical;font-size:var(--sm);line-height:1.4}
 /* tools */
 .tools{display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap;margin-bottom:var(--s3)}
 .tools label{font-size:var(--sm);color:var(--muted)}
+.sharebar{display:flex;flex-wrap:wrap;gap:var(--s2);align-items:center;margin:0 0 var(--s3);
+  padding:var(--s2) var(--s3);background:var(--card);border:1px solid var(--rule);
+  border-left:3px solid var(--yes);border-radius:var(--r2)}
+.sharebar .tx{flex:1 1 100%;font-size:var(--sm);color:var(--muted)}
+.sharebar .tx b{color:var(--ink);font-weight:600}
+.sharebar input{flex:1 1 180px;width:auto;min-width:0;font-size:var(--sm)}
 .menu{position:relative}
 .menu summary{list-style:none;display:inline-block}
 .menu summary::-webkit-details-marker{display:none}
@@ -357,6 +366,7 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
       <summary class="act" aria-label="More actions">More ▾</summary>
       <div class="mbody">
         <button id="importBtn2">Import a list…</button>
+        <button id="shareBtn" hidden>Share picks live…</button>
         <hr>
         <button id="pickAll">Pick all matches</button>
         <button id="pickNone">Unpick all</button>
@@ -364,6 +374,12 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
         <button id="reset">Clear all filters</button>
       </div>
     </details>
+  </div>
+  <div class="sharebar" id="shareBar" hidden>
+    <span class="tx"><b>Your picks are shared live.</b> Anyone with the link sees changes as you make them.</span>
+    <input type="text" id="shareUrl" readonly aria-label="Share link">
+    <button class="act" id="shareCopy">Copy link</button>
+    <button class="act" id="shareStop">Stop sharing</button>
   </div>
   <ul class="res" id="out"></ul>
   <button class="more" id="more" hidden></button>
@@ -440,10 +456,142 @@ function persist(key, get){
     if(!await store.save(key, get())) note('Could not save to this device — storage is full.');
   },250);
 }
-const persistPicks = () => persist(KEY, ()=>[...PICKED]);
+const persistPicks = () => { persist(KEY, ()=>[...PICKED]); if(SHARE) pushShare(); };
 const persistLists = () => persist(LKEY, ()=>LISTS.map(L=>
   ({id:L.id, label:L.label, ci:L.ci, state:L.state, names:[...L.names],
-    fixed:L.fixed, missing:L.missing})));
+    fixed:L.fixed, missing:L.missing, live:L.live, renamed:L.renamed, updated:L.updated})));
+
+// ---- live sharing. Paste the web-app config of your Firebase project here (see README).
+// While it is null the page never touches the network and the share action stays hidden.
+const FIREBASE = null;
+const FBV = '12.19.0';
+const SKEY = 'lt-names-share-v1';
+const ID_RE = /^[A-Za-z0-9]{16}$/;
+let SHARE = null;            // the share this browser owns: {id,label}
+const WATCH = new Map();     // share id -> unsubscribe, for lists followed from a link
+let fb = null;
+// The SDK is fetched on first use only, so the page stays offline until someone shares.
+function live(){
+  if(!FIREBASE) return Promise.reject(new Error('Live sharing is not set up on this copy of the page.'));
+  return fb ??= (async()=>{
+    const base=`https://www.gstatic.com/firebasejs/${FBV}/firebase-`;
+    const [A,U,B] = await Promise.all(['app','auth','database'].map(m=>import(base+m+'.js')));
+    const app=A.initializeApp(FIREBASE);
+    return {U, B, auth:U.getAuth(app), db:B.getDatabase(app)};
+  })().catch(e=>{ fb=null; throw e; });
+}
+// Writing needs an identity. The anonymous account persists in this browser, and the
+// rules tie each share to the account that created it, so wait for a stored sign-in to
+// load before making a new one — otherwise a reload would lose the share.
+async function signedIn(){
+  const f=await live();
+  await f.auth.authStateReady();
+  if(!f.auth.currentUser) await f.U.signInAnonymously(f.auth);
+  return {...f, uid:f.auth.currentUser.uid};
+}
+function newId(){
+  const abc='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  return [...crypto.getRandomValues(new Uint8Array(16))].map(b=>abc[b%62]).join('');
+}
+const shareUrl = id => location.origin + location.pathname + '#s=' + id;
+const why = e => e && /permission/i.test(String(e.code||e.message))
+  ? 'this browser is no longer signed in as its owner' : 'check your connection';
+
+async function startShare(){
+  if(SHARE){ copyShare(); return; }
+  const label=prompt('Name your list for the people you share it with:', 'Shared picks');
+  if(label==null) return;
+  try{
+    const {B, db, uid}=await signedIn();
+    const id=newId(), l=label.trim().slice(0,60)||'Shared picks';
+    await B.set(B.ref(db,'shares/'+id),
+      {owner:uid, label:l, names:[...PICKED].join('\n'), updated:B.serverTimestamp()});
+    SHARE={id, label:l};
+    await store.save(SKEY, SHARE);
+    paintShare(); copyShare();
+  }catch(e){ note('Could not start sharing — '+(FIREBASE?why(e):e.message)); }
+}
+let shareTimer=null;
+function pushShare(){
+  clearTimeout(shareTimer);
+  shareTimer=setTimeout(async()=>{
+    if(!SHARE) return;
+    try{
+      const {B, db}=await signedIn();
+      await B.update(B.ref(db,'shares/'+SHARE.id),
+        {names:[...PICKED].join('\n'), updated:B.serverTimestamp()});
+    }catch(e){ note('Could not update your shared list — '+why(e)+'.'); }
+  },600);
+}
+async function stopShare(){
+  if(!SHARE || !confirm('Stop sharing? The link will stop working for everyone who has it.')) return;
+  try{
+    const {B, db}=await signedIn();
+    await B.remove(B.ref(db,'shares/'+SHARE.id));
+  }catch(e){ note('Could not delete the shared copy — '+why(e)+'. The link is forgotten here anyway.'); }
+  SHARE=null; clearTimeout(shareTimer);
+  await store.save(SKEY, null);
+  paintShare();
+}
+async function copyShare(){
+  try{ await navigator.clipboard.writeText(shareUrl(SHARE.id)); note('Share link copied. It follows your picks as you change them.'); }
+  catch{ $('shareUrl').select(); note('Copy the link from the box above the names.'); }
+}
+function paintShare(){
+  $('shareBtn').hidden = !FIREBASE;
+  $('shareBtn').textContent = SHARE ? 'Copy share link' : 'Share picks live…';
+  $('shareBar').hidden = !SHARE;
+  if(SHARE) $('shareUrl').value = shareUrl(SHARE.id);
+}
+
+// Following someone else's share: a list like any import, whose names come from the server.
+function openShareLink(){
+  const m=/^#s=(.+)$/.exec(location.hash); if(!m) return;
+  history.replaceState(null, '', location.pathname+location.search);
+  const id=m[1];
+  if(!ID_RE.test(id)){ note('That share link is incomplete — ask for it again.'); return; }
+  if(!FIREBASE){ note('Live sharing is not set up on this copy of the page.'); return; }
+  if(SHARE && SHARE.id===id){ note('That is the link to your own shared picks.'); return; }
+  let L=LISTS.find(x=>x.live===id);
+  if(!L){ L=addList('Shared list', []); if(!L) return; L.live=id; }
+  L.state=1;
+  afterListChange(); watchLive(L);
+}
+async function watchLive(L){
+  const id=L.live;
+  if(WATCH.has(id)) return;
+  WATCH.set(id, null);
+  L.status='connecting'; paintLists();
+  try{
+    const {B, db}=await live();
+    if(!WATCH.has(id)) return;          // removed while the SDK loaded
+    WATCH.set(id, B.onValue(B.ref(db,'shares/'+id), s=>applyLive(id, s.val()),
+      ()=>{ WATCH.delete(id); setStatus(id,'offline'); }));
+  }catch{ WATCH.delete(id); setStatus(id,'offline'); }
+}
+function unwatch(id){ const off=WATCH.get(id); if(off) off(); WATCH.delete(id); }
+function setStatus(id, s){ const L=LISTS.find(x=>x.live===id); if(L){ L.status=s; paintLists(); } }
+function applyLive(id, v){
+  const L=LISTS.find(x=>x.live===id); if(!L) return;
+  if(!v || typeof v!=='object'){ L.status='gone'; paintLists(); return; }
+  const names=new Set();
+  (typeof v.names==='string' ? v.names.split('\n') : []).slice(0,ROWS.length).forEach(n=>{
+    const hit=BYNAME.get(n.toLowerCase()); if(hit) names.add(hit);
+  });
+  L.names=names; L.status='live';
+  if(!L.renamed && typeof v.label==='string' && v.label.trim()) L.label=v.label.trim().slice(0,60);
+  if(Number.isFinite(v.updated)) L.updated=v.updated;
+  indexLists(); paintLists(); syncSortOptions(); persistLists(); render();
+}
+function liveLine(L){
+  if(L.status==='gone') return 'No longer shared — showing the last names received';
+  if(L.status==='offline') return 'Live · can’t connect — showing the last names received';
+  if(L.status==='connecting' && !L.updated) return 'Live · connecting…';
+  if(!L.updated) return 'Live';
+  const d=new Date(L.updated), today=d.toDateString()===new Date().toDateString();
+  return 'Live · updated '+d.toLocaleString([], today
+    ? {hour:'2-digit', minute:'2-digit'} : {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+}
 
 let noteTimer=null;
 function note(msg){
@@ -720,6 +868,7 @@ $('pasteAdd').addEventListener('click',()=>{
 });
 $('listClear').addEventListener('click',()=>{
   if(!LISTS.length || !confirm('Remove every imported list?')) return;
+  LISTS.forEach(L=>{ if(L.live) unwatch(L.live); });
   LISTS.length=0; afterListChange();
 });
 
@@ -744,11 +893,12 @@ function paintLists(){
     const inp=document.createElement('input');
     inp.className='llabel'; inp.value=L.label; inp.maxLength=60;
     inp.setAttribute('aria-label','Name of imported list '+(i+1));
-    inp.addEventListener('input',()=>{ L.label=inp.value.slice(0,60); persistLists(); paintActive(); render(); });
+    inp.addEventListener('input',()=>{ L.label=inp.value.slice(0,60); if(L.live) L.renamed=true;
+      persistLists(); paintActive(); render(); });
     const x=document.createElement('button');
     x.className='lx'; x.title='Remove this list'; x.setAttribute('aria-label','Remove list '+L.label);
     x.textContent='×';
-    x.addEventListener('click',()=>{ LISTS.splice(i,1); afterListChange(); });
+    x.addEventListener('click',()=>{ if(L.live) unwatch(L.live); LISTS.splice(i,1); afterListChange(); });
     head.append(sw,inp,x);
 
     const foot=document.createElement('div'); foot.className='lfoot';
@@ -763,6 +913,12 @@ function paintLists(){
     num.textContent=L.names.size.toLocaleString('en-US')+' name'+(L.names.size===1?'':'s');
     foot.append(seg,num);
     card.append(head,foot);
+    if(L.live){
+      const st=document.createElement('div');
+      st.className='lstat'+(L.status==='live'?' on':'');
+      st.textContent=liveLine(L);
+      card.appendChild(st);
+    }
 
     const parts=[];
     if(L.fixed.length) parts.push(L.fixed.length+' spelling'+(L.fixed.length===1?'':'s')+' corrected');
@@ -1082,16 +1238,29 @@ function hydrateLists(saved){
     const fixed=(Array.isArray(o.fixed)?o.fixed:[]).slice(0,MAX_NAMES)
       .filter(m=>m&&typeof m.raw==='string'&&typeof m.to==='string'&&BYNAME.has(m.to.toLowerCase()))
       .map(m=>({raw:String(m.raw).slice(0,80), to:BYNAME.get(m.to.toLowerCase())}));
-    if(!names.size && !missing.length) return;
+    const live = typeof o.live==='string' && ID_RE.test(o.live) ? o.live : undefined;
+    if(!names.size && !missing.length && !live) return;
     LISTS.push({id:'L'+(++seq), label:String(o.label||'Imported list').slice(0,60),
       ci: Number.isInteger(o.ci) && o.ci>=0 && o.ci<8 ? o.ci : freeColor(),
-      state: [0,1,2].includes(o.state) ? o.state : 0, names, fixed, missing});
+      state: [0,1,2].includes(o.state) ? o.state : 0, names, fixed, missing,
+      live, renamed: live ? o.renamed===true : undefined,
+      updated: live && Number.isFinite(o.updated) ? o.updated : undefined});
   });
 }
-Promise.all([store.load(KEY), store.load(LKEY)]).then(([picks, lists])=>{
+$('shareBtn').addEventListener('click',startShare);
+$('shareCopy').addEventListener('click',copyShare);
+$('shareStop').addEventListener('click',stopShare);
+addEventListener('hashchange',openShareLink);
+Promise.all([store.load(KEY), store.load(LKEY), store.load(SKEY)]).then(([picks, lists, share])=>{
   (Array.isArray(picks)?picks:[]).forEach(n=>PICKED.add(n));
   hydrateLists(lists);
-  indexLists(); syncSortOptions(); paintLists(); paint(); render();
+  if(FIREBASE && share && typeof share.id==='string' && ID_RE.test(share.id)){
+    SHARE={id:share.id, label:String(share.label||'').slice(0,60)};
+    pushShare();                        // catch up on anything that failed to send last time
+  }
+  indexLists(); syncSortOptions(); paintLists(); paint(); render(); paintShare();
+  if(FIREBASE) LISTS.forEach(L=>{ if(L.live) watchLive(L); });
+  openShareLink();
 });
 </script>
 </body>

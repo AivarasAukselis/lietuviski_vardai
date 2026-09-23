@@ -1,0 +1,16 @@
+{
+  "rules": {
+    "shares": {
+      "$id": {
+        ".read": "$id.matches(/^[A-Za-z0-9]{16}$/)",
+        ".write": "auth != null && $id.matches(/^[A-Za-z0-9]{16}$/) && (!data.exists() || data.child('owner').val() === auth.uid) && (!newData.exists() || newData.child('owner').val() === auth.uid)",
+        ".validate": "newData.hasChildren(['owner', 'label', 'names', 'updated'])",
+        "owner": { ".validate": "newData.isString()" },
+        "label": { ".validate": "newData.isString() && newData.val().length <= 60" },
+        "names": { ".validate": "newData.isString() && newData.val().length <= 100000" },
+        "updated": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}
