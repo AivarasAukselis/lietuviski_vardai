@@ -461,9 +461,18 @@ const persistLists = () => persist(LKEY, ()=>LISTS.map(L=>
   ({id:L.id, label:L.label, ci:L.ci, state:L.state, names:[...L.names],
     fixed:L.fixed, missing:L.missing, live:L.live, renamed:L.renamed, updated:L.updated})));
 
-// ---- live sharing. Paste the web-app config of your Firebase project here (see README).
-// While it is null the page never touches the network and the share action stays hidden.
-const FIREBASE = null;
+// ---- live sharing. The web-app config of the Firebase project (see README).
+// Sharing stays off, the page never touches the network and the share action stays
+// hidden, until databaseURL holds a real URL: a half-filled config must not show a
+// share button that can only fail.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDCYhWKhCdIH8qo5U9PJ1O6zYQAWlBNSK8",
+  authDomain: "vardai-88c26.firebaseapp.com",
+  databaseURL: "__DBURL__",
+  projectId: "vardai-88c26",
+  appId: "1:1081421509048:web:b2aef0f3d473e6564f1f4d"
+};
+const FIREBASE = /^https:\/\/\S+$/.test(FIREBASE_CONFIG.databaseURL) ? FIREBASE_CONFIG : null;
 const FBV = '12.19.0';
 const SKEY = 'lt-names-share-v1';
 const ID_RE = /^[A-Za-z0-9]{16}$/;

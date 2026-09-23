@@ -98,9 +98,10 @@ Realtime Database that the page talks to directly. The free Spark plan is ample.
 3. *Build → Realtime Database → Create database* (locked mode is fine). On the
    *Rules* tab, replace everything with the contents of `database.rules.json`
    and publish.
-4. In `template.html`, replace `const FIREBASE = null;` with the config object
-   from step 1 (make sure it includes `databaseURL`), run `python build.py`, and
-   push.
+4. In `template.html`, put the values from step 1 into `FIREBASE_CONFIG`,
+   including `databaseURL` (shown at the top of the Realtime Database *Data* tab),
+   run `python build.py`, and push. Sharing stays switched off until
+   `databaseURL` is a real `https://` URL.
 
 The config is not a secret — it only identifies the project; the rules are what
 protect the data. They allow anyone with a link to read that one list, nobody to
