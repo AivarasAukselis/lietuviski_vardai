@@ -14,7 +14,8 @@ the committed names.json into index.html.
 
 Output:
     names.json   compact dataset (one row per distinct given name)
-    index.html   self-contained page with that dataset inlined
+    index.html   self-contained page with that dataset inlined, along with
+                 tevu_darzelis.json (see tevu_darzelis.py) if present
 """
 import collections
 import json
@@ -104,9 +105,12 @@ def build_rows(singles, tokens, combo_gender):
 
 
 def render(payload, count):
-    """Inline the dataset into template.html and return the finished page."""
+    """Inline the dataset and the tevu-darzelis.lt address map into template.html."""
     template = (ROOT / "template.html").read_text(encoding="utf-8")
+    td = ROOT / "tevu_darzelis.json"
+    links = td.read_text(encoding="utf-8") if td.exists() else '{"slug":{},"absent":[]}'
     page = template.replace("of 8,954 names", f"of {count:,} names")
+    page = page.replace("/*__TD__*/", links.replace("</", "<\\/"))
     return page.replace("/*__DATA__*/", payload.replace("</", "<\\/"))
 
 

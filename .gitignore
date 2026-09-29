@@ -1,3 +1,4 @@
 *.jsonl
 *.bin
 .DS_Store
+tevu_darzelis_index.json

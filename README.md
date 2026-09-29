@@ -66,12 +66,15 @@ combines with them:
 Letter, syllable and every other filter still apply on top. The *Picked* tab
 is unchanged: it shows every pick, ignoring filters.
 
-**More about a name.** The ↗ beside each name opens its page on
+**More about a name.** The ↗ beside a name opens its page on
 [tevu-darzelis.lt](https://www.tevu-darzelis.lt/vaiku-vardai/) — meaning, name
-day and births per year. That site addresses names by their accent-free spelling
-(`Rūta` → `/ruta/`, and the plain `Ruta` → `/ruta1/`); for the few spellings
-where three or more names share an address there, the link is a search instead.
-Nothing from that site is copied into this page.
+day and births per year. 5,596 of the register's names have a page there; the
+rest show no ↗. That site addresses names by their accent-free spelling
+(`Rūta` → `/ruta/`), but where spellings collide the numbering (`Ruta` →
+`/ruta1/`, `Adelaide` → `/adelaide-1/`) follows the order the site added them,
+so the addresses are read from the site's own index rather than guessed (see
+*Refreshing the tevu-darzelis.lt links* below). Only those addresses are stored;
+nothing else from that site is copied into this page.
 
 Three formats are read: the CSV this page exports (any delimiter; if it carries a
 `picked` column that is actually used, only the picked rows are taken), plain
@@ -167,6 +170,21 @@ Row format in `names.json`:
   subgroups indices into the top-level "pogr" array; subsections into "posk"
   lookups   times the name was searched on the VLKK site
 ```
+
+## Refreshing the tevu-darzelis.lt links
+
+`tevu_darzelis.json` maps register names to their pages on tevu-darzelis.lt: the
+names at a numbered address, and the names with no page. To refresh it after the
+site adds names:
+
+```sh
+python tevu_darzelis.py    # crawl the site's A–Z index (~1 hour), write tevu_darzelis.json
+python build.py            # inline it into index.html
+```
+
+The crawl waits 10 seconds between requests, as the site's robots.txt asks, and
+saves the raw index to `tevu_darzelis_index.json` so `--index` can redo the
+mapping without crawling again — for example after rebuilding `names.json`.
 
 ## Data source
 

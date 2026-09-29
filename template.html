@@ -408,6 +408,7 @@ Source: State Commission of the Lithuanian Language (VLKK) register of citizens�
 </footer>
 
 <script id="data" type="application/json">/*__DATA__*/</script>
+<script id="td" type="application/json">/*__TD__*/</script>
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const ROWS = D.rows; // [name,gender,norm,saint,grp[],pogr[],posk[],pop,cataloged]
@@ -1132,21 +1133,15 @@ const NORMLBL={0:'uncatalogued',1:'recommended',2:'discouraged',3:'not recommend
 const GENLBL={0:'',1:'f',2:'m'};
 let matches=[], listed=[];
 
-// tevu-darzelis.lt addresses a name by its accent-free spelling (Rūta → /ruta/). When an
-// accented and a plain spelling fold together, the accented one keeps the address and the
-// plain one gets a 1 (Ruta → /ruta1/). Other collisions are numbered in an order that can't
-// be known from here, so those names get a search instead of a guess.
+// tevu-darzelis.lt addresses a name by its accent-free spelling (Rūta → /ruta/), but where
+// spellings collide the numbering (/ruta1/, /adelaide-1/) follows the order the site added
+// them, and a third of the register has no page there at all. tevu_darzelis.py reads the
+// real addresses off the site's index; the exceptions and the missing names are inlined.
 const TDBASE='https://www.tevu-darzelis.lt/vaiku-vardai/';
-const TD=new Map();
-BYFOLD.forEach((names, f)=>{
-  const plain = names.filter(n=>n.toLowerCase()===f);
-  if(names.length===1) TD.set(names[0], TDBASE+encodeURIComponent(f)+'/');
-  else if(names.length===2 && plain.length===1){
-    names.forEach(n=>TD.set(n, TDBASE+encodeURIComponent(f)+(n===plain[0]?'1':'')+'/'));
-  }
-});
-const tdLink = n => TD.get(n) || 'https://www.google.com/search?q='
-  + encodeURIComponent('site:tevu-darzelis.lt/vaiku-vardai "'+n+'"');
+const TDMAP=JSON.parse(document.getElementById('td').textContent);
+const TDOFF=new Set(TDMAP.absent);
+const tdLink = n => TDOFF.has(n) ? null
+  : TDBASE+encodeURIComponent(TDMAP.slug[n] || fold(n))+'/';
 
 function order(arr){
   const a=arr.slice();
@@ -1163,7 +1158,7 @@ function row(r){
   if(r[3]) bits.push('saint');
   if(r[5].length) bits.push(esc(D.pogr[r[5][0]]));
   const on=PICKED.has(r[0])?'1':'0';
-  const name=esc(r[0]);
+  const name=esc(r[0]), td=tdLink(r[0]);
   const ids=MEMBER.get(r[0]);
   let dots='';
   if(ids){
@@ -1176,10 +1171,9 @@ function row(r){
   return `<li data-on="${on}" data-name="${name}">`
     + `<button class="pick" aria-label="Pick ${name}" aria-pressed="${on==='1'}"></button>`
     + `<span class="hd"><span class="name">${name}</span><span class="syl">${syl(r[0])}</span>${dots}`
-    + `<a class="td" href="${esc(tdLink(r[0]))}" target="_blank" rel="noopener" title="${TD.has(r[0])
-        ? name+' on tevu-darzelis.lt — meaning, name day, births by year'
-        : 'Search tevu-darzelis.lt for '+name+' — this spelling shares its address there with others'}"`
-    + ` aria-label="${name} on tevu-darzelis.lt">↗</a></span>`
+    + (td ? `<a class="td" href="${esc(td)}" target="_blank" rel="noopener"`
+      + ` title="${name} on tevu-darzelis.lt — meaning, name day, births by year"`
+      + ` aria-label="${name} on tevu-darzelis.lt">↗</a>` : '') + '</span>'
     + `<span class="meta">${bits.join(' · ')}</span></li>`;
 }
 function render(){
