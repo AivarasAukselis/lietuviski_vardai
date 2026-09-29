@@ -54,6 +54,25 @@ both to *must be in*, and see only the names they agree on — every row shows a
 coloured dot per list it belongs to, and *Sort → in most lists* ranks by
 agreement. Up to twelve lists at a time; they persist per device like the picks.
 
+**Your picks as a filter.** *My picks* sits at the top of the Lists section and
+takes the same *any / must be in / exclude* setting as an imported list, so it
+combines with them:
+
+- picks *must be in*, a list *must be in*, *every list*: names on both;
+- the same with *any list*: names on either;
+- a list *must be in*, picks *exclude*: names on the list you haven't picked yet;
+- picks *exclude* with no list: everything you haven't picked yet.
+
+Letter, syllable and every other filter still apply on top. The *Picked* tab
+is unchanged: it shows every pick, ignoring filters.
+
+**More about a name.** The ↗ beside each name opens its page on
+[tevu-darzelis.lt](https://www.tevu-darzelis.lt/vaiku-vardai/) — meaning, name
+day and births per year. That site addresses names by their accent-free spelling
+(`Rūta` → `/ruta/`, and the plain `Ruta` → `/ruta1/`); for the few spellings
+where three or more names share an address there, the link is a search instead.
+Nothing from that site is copied into this page.
+
 Three formats are read: the CSV this page exports (any delimiter; if it carries a
 `picked` column that is actually used, only the picked rows are taken), plain
 text with one name per line as produced by Copy, and JSON — either `["Eglė",…]`

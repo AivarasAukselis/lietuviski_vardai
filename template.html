@@ -106,6 +106,11 @@ textarea{width:100%;resize:vertical;font-size:var(--sm);line-height:1.4}
 .lcard{background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--rule-2);
   border-radius:var(--r2);padding:var(--s2) var(--s3);margin-bottom:var(--s2)}
 .lcard.on{border-left-color:var(--c)}
+.lcard.mine{--c:var(--yes)}
+.lcard.mine .lname{flex:1;min-width:0;font-size:var(--md);font-weight:600;padding:2px var(--s1)}
+.td{flex:none;color:var(--muted);text-decoration:none;font-size:13px;line-height:1;
+  padding:3px 5px;border-radius:var(--r1)}
+.td:hover{color:var(--ink);background:var(--sink)}
 .lhead{display:flex;align-items:center;gap:var(--s2)}
 .sw{width:11px;height:11px;border-radius:50%;flex:none;background:var(--c)}
 .llabel{flex:1;min-width:0;border:1px solid transparent;background:none;border-radius:var(--r1);
@@ -269,7 +274,7 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
   <div class="phead"><strong>Filters</strong><button class="act" id="sheetClose">Done</button></div>
 
   <section id="listSec">
-    <h2>Imported lists</h2>
+    <h2>Lists</h2>
     <div id="lists"></div>
     <button class="drop" id="importBtn">Import a list — drop a file anywhere, or browse</button>
     <input type="file" id="fileIn" multiple hidden
@@ -281,7 +286,8 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
     </details>
     <p class="hint">A list exported from this page — CSV, copied text or JSON — becomes a
       colour you can filter by. Load two shortlists and set both to <b>must be in</b> to see
-      the names you agree on.</p>
+      the names you agree on. Your own picks work the same way: require them alongside a list
+      for the overlap, or exclude them to see what you haven't picked yet.</p>
     <button class="act" id="listClear" hidden style="margin-top:var(--s3)">Remove all lists</button>
   </section>
 
@@ -428,7 +434,7 @@ ROWS.forEach(r => {
 
 const DEF = () => ({smin:1, smax:9, lmin:1, lmax:30, soften:true, mode:'c', q:'',
   genderPicked:null, norm:new Set(), grp:new Set(), saint:false, pogr:new Set(),
-  sort:'az', shown:200, view:'all', listMode:'all'});
+  sort:'az', shown:200, view:'all', listMode:'all', pickState:0});
 const S = Object.assign({letters:{}, ends:{}}, DEF());
 const PICKED = new Set();
 const LISTS = [];            // {id,label,ci,state,names:Set,missing:[{raw,near,cands}]}
@@ -892,8 +898,34 @@ addEventListener('drop',e=>{ if(!hasFiles(e))return; e.preventDefault();
   dragDepth=0; $('dropveil').hidden=true; importFiles(e.dataTransfer.files); });
 
 const STATES=[['0','any'],['1','must be in'],['2','exclude']];
+function paintPickCount(){
+  const e=$('pickNum');
+  if(e) e.textContent=PICKED.size.toLocaleString('en-US')+' name'+(PICKED.size===1?'':'s');
+}
+const nRequired = () => LISTS.filter(L=>L.state===1).length + (S.pickState===1?1:0);
+function pickCard(){
+  const card=document.createElement('div');
+  card.className='lcard mine'+(S.pickState?' on':'');
+  const head=document.createElement('div'); head.className='lhead';
+  const sw=document.createElement('span'); sw.className='sw';
+  const nm=document.createElement('span'); nm.className='lname'; nm.textContent='My picks';
+  head.append(sw,nm);
+  const foot=document.createElement('div'); foot.className='lfoot';
+  const seg=document.createElement('div'); seg.className='seg';
+  STATES.forEach(([v,lab])=>{
+    const b=document.createElement('button');
+    b.textContent=lab; b.setAttribute('aria-pressed', String(S.pickState)===v);
+    b.addEventListener('click',()=>{ S.pickState=+v; paintLists(); changed(); });
+    seg.appendChild(b);
+  });
+  const num=document.createElement('span'); num.className='lnum'; num.id='pickNum';
+  foot.append(seg,num);
+  card.append(head,foot);
+  return card;
+}
 function paintLists(){
   const box=$('lists'); box.innerHTML='';
+  box.appendChild(pickCard()); paintPickCount();
   LISTS.forEach((L,i)=>{
     const card=document.createElement('div');
     card.className='lcard c'+L.ci+(L.state?' on':'');
@@ -948,7 +980,7 @@ function paintLists(){
     box.appendChild(card);
   });
 
-  if(LISTS.filter(L=>L.state===1).length>1){
+  if(nRequired()>1){
     const row=document.createElement('div'); row.className='row'; row.style.marginTop='var(--s2)';
     const lab=document.createElement('label'); lab.textContent='Names must be in';
     const seg=document.createElement('div'); seg.className='seg';
@@ -1007,6 +1039,8 @@ function activeFilters(){
   [...S.grp].forEach(v=>f.push({tone:'req', text:labelOf(GROUPS,v), clear(){S.grp.delete(v);}}));
   if(S.saint) f.push({tone:'req', text:'saint’s name', clear(){S.saint=false;}});
   [...S.pogr].forEach(v=>f.push({tone:'req', text:D.pogr[v], clear(){S.pogr.delete(v);}}));
+  if(S.pickState) f.push({tone:S.pickState===1?'req':'exc',
+    text:S.pickState===1?'in my picks':'not in my picks', clear(){S.pickState=0;}});
   LISTS.forEach(L=>{ if(L.state) f.push({tone:'lst', ci:L.ci,
     text:(L.state===1?'in ':'not in ')+L.label, clear(){L.state=0;}}); });
   return f;
@@ -1032,7 +1066,7 @@ function paintActive(){
     c.appendChild(x);
     box.appendChild(c);
   });
-  if(LISTS.filter(L=>L.state===1).length>1){
+  if(nRequired()>1){
     const m=document.createElement('button');
     m.className='fchip mode';
     m.textContent = S.listMode==='all' ? 'in every list' : 'in any list';
@@ -1068,6 +1102,8 @@ function letterOk(lower){
 let LF={req:[],exc:[],all:true};
 function listFilter(){
   LF={req:LISTS.filter(L=>L.state===1), exc:LISTS.filter(L=>L.state===2), all:S.listMode==='all'};
+  // Your own picks count as one more list, so every/any/exclude combine them like the rest.
+  if(S.pickState) (S.pickState===1?LF.req:LF.exc).push({names:PICKED});
 }
 function match(r){
   const name=r[0], lower=name.toLowerCase();
@@ -1096,6 +1132,22 @@ const NORMLBL={0:'uncatalogued',1:'recommended',2:'discouraged',3:'not recommend
 const GENLBL={0:'',1:'f',2:'m'};
 let matches=[], listed=[];
 
+// tevu-darzelis.lt addresses a name by its accent-free spelling (Rūta → /ruta/). When an
+// accented and a plain spelling fold together, the accented one keeps the address and the
+// plain one gets a 1 (Ruta → /ruta1/). Other collisions are numbered in an order that can't
+// be known from here, so those names get a search instead of a guess.
+const TDBASE='https://www.tevu-darzelis.lt/vaiku-vardai/';
+const TD=new Map();
+BYFOLD.forEach((names, f)=>{
+  const plain = names.filter(n=>n.toLowerCase()===f);
+  if(names.length===1) TD.set(names[0], TDBASE+encodeURIComponent(f)+'/');
+  else if(names.length===2 && plain.length===1){
+    names.forEach(n=>TD.set(n, TDBASE+encodeURIComponent(f)+(n===plain[0]?'1':'')+'/'));
+  }
+});
+const tdLink = n => TD.get(n) || 'https://www.google.com/search?q='
+  + encodeURIComponent('site:tevu-darzelis.lt/vaiku-vardai "'+n+'"');
+
 function order(arr){
   const a=arr.slice();
   if(S.sort==='syl') a.sort((x,y)=>syl(x[0])-syl(y[0]) || x[0].localeCompare(y[0],'lt'));
@@ -1123,7 +1175,11 @@ function row(r){
   }
   return `<li data-on="${on}" data-name="${name}">`
     + `<button class="pick" aria-label="Pick ${name}" aria-pressed="${on==='1'}"></button>`
-    + `<span class="hd"><span class="name">${name}</span><span class="syl">${syl(r[0])}</span>${dots}</span>`
+    + `<span class="hd"><span class="name">${name}</span><span class="syl">${syl(r[0])}</span>${dots}`
+    + `<a class="td" href="${esc(tdLink(r[0]))}" target="_blank" rel="noopener" title="${TD.has(r[0])
+        ? name+' on tevu-darzelis.lt — meaning, name day, births by year'
+        : 'Search tevu-darzelis.lt for '+name+' — this spelling shares its address there with others'}"`
+    + ` aria-label="${name} on tevu-darzelis.lt">↗</a></span>`
     + `<span class="meta">${bits.join(' · ')}</span></li>`;
 }
 function render(){
@@ -1133,7 +1189,7 @@ function render(){
 
   const total=matches.length.toLocaleString('en-US');
   $('n').textContent=total; $('n2').textContent=total;
-  $('selN').textContent = PICKED.size;
+  $('selN').textContent = PICKED.size; paintPickCount();
   document.querySelectorAll('#view button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===S.view));
   paintActive();
 
@@ -1141,6 +1197,7 @@ function render(){
   if(!listed.length){
     let msg;
     if(S.view==='sel') msg='Nothing picked yet. Tap the circle beside a name to keep it.';
+    else if(S.pickState===1 && !PICKED.size) msg='Nothing picked yet, so no name is in <b>my picks</b>. Set My picks back to “any” and tap the circle beside a name to keep it.';
     else if(LF.req.length>1 && LF.all) msg='No name is in <b>every</b> required list. Switch the lists to “in any list”, or set one back to “any”.';
     else msg='No name fits these rules. Loosen a letter rule or widen the syllable range.';
     out.innerHTML = `<li class="empty">${msg}</li>`;
@@ -1156,14 +1213,15 @@ function toggle(name){
   PICKED.has(name)?PICKED.delete(name):PICKED.add(name);
   persistPicks();
   const li=document.querySelector(`#out li[data-name="${CSS.escape(name)}"]`);
-  if(li && S.view==='all'){
+  if(li && S.view==='all' && !S.pickState){
     const on=PICKED.has(name);
     li.dataset.on=on?'1':'0';
     li.querySelector('.pick').setAttribute('aria-pressed',on);
-    $('selN').textContent=PICKED.size;
+    $('selN').textContent=PICKED.size; paintPickCount();
   } else render();
 }
 $('out').addEventListener('click',e=>{
+  if(e.target.closest('a')) return;
   const dot=e.target.closest('.dot');
   if(dot){ const L=LISTS[+dot.dataset.li];
     if(L){ L.state = L.state===1?0:1; paintLists(); persistLists(); changed(); }
