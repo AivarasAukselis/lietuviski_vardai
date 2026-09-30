@@ -202,6 +202,10 @@ li[data-on="1"] .name{color:var(--yes)}
   border-radius:var(--r1);padding:0 5px;flex:none}
 .dots{display:inline-flex;gap:3px;align-items:center;flex:none}
 .dot{width:9px;height:9px;border-radius:50%;border:0;padding:0;cursor:pointer;flex:none}
+.bn{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:var(--xs);
+  color:var(--muted);font-variant-numeric:tabular-nums}
+.bn svg{width:48px;height:14px;overflow:visible}
+.bn polyline{fill:none;stroke:var(--l0);stroke-width:1.4;stroke-linejoin:round;stroke-linecap:round}
 .meta{grid-area:meta;font-size:12px;color:var(--muted);overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap}
 .meta .w{color:var(--no)}
@@ -365,6 +369,8 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
       <option value="syl">fewest syllables</option>
       <option value="len">shortest</option>
       <option value="pop">most looked up</option>
+      <option value="born" id="sortBorn">most born</option>
+      <option value="rise" id="sortRise">rising fastest</option>
     </select>
     <button class="act" id="copy">Copy</button>
     <button class="act" id="csv">CSV</button>
@@ -405,10 +411,12 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
 
 <footer>
 Source: State Commission of the Lithuanian Language (VLKK) register of citizens’ given names, via data.gov.lt — names of citizens per the 2006 Population Register plus newborns since. 8,523 names carry full catalogue data; 431 appear only inside two‑name combinations and are marked uncatalogued. Syllable counts are computed from Lithuanian vowel and diphthong rules and are a good approximation, not an official count.
+<span id="bsrc"></span>
 </footer>
 
 <script id="data" type="application/json">/*__DATA__*/</script>
 <script id="td" type="application/json">/*__TD__*/</script>
+<script id="births" type="application/json">/*__STATS__*/</script>
 <script>
 const D = JSON.parse(document.getElementById('data').textContent);
 const ROWS = D.rows; // [name,gender,norm,saint,grp[],pogr[],posk[],pop,cataloged]
@@ -1143,11 +1151,41 @@ const TDOFF=new Set(TDMAP.absent);
 const tdLink = n => TDOFF.has(n) ? null
   : TDBASE+encodeURIComponent(TDMAP.slug[n] || fold(n))+'/';
 
+// Births per year from the Population Register, as charted on tevu-darzelis.lt (see
+// tevu_darzelis.py). Each entry is [births per year…, trend for the last year, last rank];
+// the site hides counts below 5, so 0 means "fewer than 5 or none".
+const BIRTHS=JSON.parse(document.getElementById('births').textContent);
+const BYEARS=BIRTHS.years.map(Number), BLAST=BYEARS[BYEARS.length-2];
+const bArr = n => BIRTHS.names[n];
+const bornLast = n => { const a=bArr(n); return a ? a[a.length-3] : 0; };
+const rising = n => { const a=bArr(n); if(!a) return 0; const c=a.slice(0,-2), k=c.length;
+  return c[k-1]+c[k-2]+c[k-3] - (c[k-4]+c[k-5]+c[k-6]); };
+function spark(n){
+  const a=bArr(n); if(!a) return '';
+  const c=a.slice(0,-2), trend=a[a.length-2], rank=a[a.length-1];
+  const max=Math.max(...c,1), w=48, h=14;
+  const pts=c.map((v,i)=>`${(i*w/(c.length-1)).toFixed(1)},${(h-v/max*h).toFixed(1)}`).join(' ');
+  const peak=c.indexOf(max);
+  const title=`${n}: ${c[c.length-1]||'<5'} born in ${BLAST}`
+    + (rank?` (#${rank})`:'') + `; peak ${max} in ${BYEARS[peak]}`
+    + (trend?`; ${BYEARS[BYEARS.length-1]} trend ${trend}`:'');
+  return `<span class="bn" title="${esc(title)}"><svg viewBox="0 0 ${w} ${h}" aria-hidden="true">`
+    + `<polyline points="${pts}"/></svg>${c[c.length-1]||''}</span>`;
+}
+if(BIRTHS.fetched){
+  $('sortBorn').textContent=`most born in ${BLAST}`;
+  $('bsrc').textContent=`Births per year (${BYEARS[0]}–${BLAST}) are Population Register figures as charted `
+    + `on tevu-darzelis.lt, fetched for ${BIRTHS.fetched.toLocaleString('en-US')} names; `
+    + `counts below 5 a year are not published.`;
+} else { $('sortBorn').remove(); $('sortRise').remove(); }
+
 function order(arr){
   const a=arr.slice();
   if(S.sort==='syl') a.sort((x,y)=>syl(x[0])-syl(y[0]) || x[0].localeCompare(y[0],'lt'));
   else if(S.sort==='len') a.sort((x,y)=>[...x[0]].length-[...y[0]].length || x[0].localeCompare(y[0],'lt'));
   else if(S.sort==='pop') a.sort((x,y)=>y[7]-x[7] || x[0].localeCompare(y[0],'lt'));
+  else if(S.sort==='born') a.sort((x,y)=>bornLast(y[0])-bornLast(x[0]) || x[0].localeCompare(y[0],'lt'));
+  else if(S.sort==='rise') a.sort((x,y)=>rising(y[0])-rising(x[0]) || x[0].localeCompare(y[0],'lt'));
   else if(S.sort==='lists') a.sort((x,y)=>nLists(y[0])-nLists(x[0]) || x[0].localeCompare(y[0],'lt'));
   else a.sort((x,y)=>x[0].localeCompare(y[0],'lt'));
   return a;
@@ -1170,7 +1208,7 @@ function row(r){
   }
   return `<li data-on="${on}" data-name="${name}">`
     + `<button class="pick" aria-label="Pick ${name}" aria-pressed="${on==='1'}"></button>`
-    + `<span class="hd"><span class="name">${name}</span><span class="syl">${syl(r[0])}</span>${dots}`
+    + `<span class="hd"><span class="name">${name}</span><span class="syl">${syl(r[0])}</span>${spark(r[0])}${dots}`
     + (td ? `<a class="td" href="${esc(td)}" target="_blank" rel="noopener"`
       + ` title="${name} on tevu-darzelis.lt — meaning, name day, births by year"`
       + ` aria-label="${name} on tevu-darzelis.lt">↗</a>` : '') + '</span>'

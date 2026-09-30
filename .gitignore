@@ -2,3 +2,5 @@
 *.bin
 .DS_Store
 tevu_darzelis_index.json
+tevu_darzelis_stats.tmp
+__pycache__/

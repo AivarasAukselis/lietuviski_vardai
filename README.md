@@ -73,8 +73,18 @@ rest show no ↗. That site addresses names by their accent-free spelling
 (`Rūta` → `/ruta/`), but where spellings collide the numbering (`Ruta` →
 `/ruta1/`, `Adelaide` → `/adelaide-1/`) follows the order the site added them,
 so the addresses are read from the site's own index rather than guessed (see
-*Refreshing the tevu-darzelis.lt links* below). Only those addresses are stored;
-nothing else from that site is copied into this page.
+*Refreshing the tevu-darzelis.lt links* below). From that site the page keeps
+only these addresses and the births figures below, not its texts.
+
+**Births per year.** Next to each name that has them, a small line shows how
+many children got it as a first name each year since 1999. The number beside it
+is the latest full year, and hovering shows that year's rank, the peak year and
+the site's trend figure for the current year. *Sort → most born* ranks by that
+latest count, and *rising fastest* by the growth of the last three years over
+the three before. The figures are the Population Register's, as charted on
+tevu-darzelis.lt, fetched with `python tevu_darzelis.py stats`. Counts below 5 a
+year are not published, so a name with no line may still have been given a few
+times.
 
 Three formats are read: the CSV this page exports (any delimiter; if it carries a
 `picked` column that is actually used, only the picked rows are taken), plain
@@ -185,6 +195,19 @@ python build.py            # inline it into index.html
 The crawl waits 10 seconds between requests, as the site's robots.txt asks, and
 saves the raw index to `tevu_darzelis_index.json` so `--index` can redo the
 mapping without crawling again — for example after rebuilding `names.json`.
+
+Births per year come from each name's page:
+
+```sh
+python tevu_darzelis.py stats 120   # fetch for up to 120 minutes, then stop
+python build.py
+```
+
+At the same 10-second pace the ~5,600 pages take about 16 hours, so the command
+resumes where it stopped and fetches the most popular names first (when
+`tevu_darzelis_index.json` is present); partial results are usable. Progress is
+kept in `tevu_darzelis_stats.json`. To refresh the figures for a new year,
+delete that file and run it again.
 
 ## Data source
 

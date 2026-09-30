@@ -15,7 +15,8 @@ the committed names.json into index.html.
 Output:
     names.json   compact dataset (one row per distinct given name)
     index.html   self-contained page with that dataset inlined, along with
-                 tevu_darzelis.json (see tevu_darzelis.py) if present
+                 tevu_darzelis.json and tevu_darzelis_stats.json (see
+                 tevu_darzelis.py) if present
 """
 import collections
 import json
@@ -111,7 +112,28 @@ def render(payload, count):
     links = td.read_text(encoding="utf-8") if td.exists() else '{"slug":{},"absent":[]}'
     page = template.replace("of 8,954 names", f"of {count:,} names")
     page = page.replace("/*__TD__*/", links.replace("</", "<\\/"))
+    page = page.replace("/*__STATS__*/", births())
     return page.replace("/*__DATA__*/", payload.replace("</", "<\\/"))
+
+
+def births():
+    """Compact tevu_darzelis_stats.json for the page: names with any births only.
+
+    Returns {"years": [...], "fetched": n, "names": {name: [births..., trend, rank]}}
+    where births cover every chart year but the last, trend is the site's figure
+    for the last year, and rank is the name's place in the last full year.
+    """
+    path = ROOT / "tevu_darzelis_stats.json"
+    if not path.exists():
+        return '{"years":[],"fetched":0,"names":{}}'
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    names = {}
+    for name, rec in raw["names"].items():
+        if rec:
+            counts, trend, ranks = rec
+            names[name] = [c or 0 for c in counts] + [trend or 0, ranks[len(counts) - 1] or 0]
+    out = {"years": raw["years"], "fetched": len(raw["names"]), "names": names}
+    return json.dumps(out, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
 
 
 def emit(payload, count):
