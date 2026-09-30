@@ -4,7 +4,8 @@
 Usage:
     python tevu_darzelis.py                  crawl the site's A-Z name index, then map
     python tevu_darzelis.py --index FILE     map from a saved crawl instead of crawling
-    python tevu_darzelis.py stats [MINUTES]  fetch births per year for mapped names
+    python tevu_darzelis.py stats [MINUTES] [--out FILE]
+                                             fetch births per year for mapped names
 
 tevu-darzelis.lt addresses a name by its accent-free spelling, but when several
 names fold to the same spelling the numbering (/ruta/, /ruta1/, /adelaide-1/)
@@ -27,7 +28,7 @@ from Population Register figures: births per year from 1999, the site's trend
 figure for the current year, and the name's yearly rank. It keeps the same
 10-second pace, so all ~5,600 pages take about 16 hours; it resumes where it
 left off, can stop itself after MINUTES, and fetches the most popular names
-first. Output, tevu_darzelis_stats.json:
+first. Output, tevu_darzelis_stats.json unless --out names another file:
     years     the chart's years
     names     {name: [births per year up to the last year, trend for the last
               year, ranks per year]}, or 0 when the
@@ -113,7 +114,7 @@ def page_stats(text):
     return years, births, trend[-1], ranks
 
 
-def stats(minutes):
+def stats(minutes, out_path):
     stop = time.time() + minutes * 60 if minutes else None
     rows = json.loads((ROOT / "names.json").read_text(encoding="utf-8"))["rows"]
     links = json.loads((ROOT / "tevu_darzelis.json").read_text(encoding="utf-8"))
@@ -129,7 +130,6 @@ def stats(minutes):
             rank.setdefault(name, per_letter[s[:1]])
     order = sorted(slug, key=lambda n: (rank.get(n, 1e9), n))
 
-    out_path = ROOT / "tevu_darzelis_stats.json"
     out = (json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists()
            else {"years": None, "names": {}})
     todo = [n for n in order if n not in out["names"]]
@@ -150,13 +150,20 @@ def stats(minutes):
         if i % 50 == 0:
             print(f"{len(out['names']):,}/{len(order):,}  {name}", file=sys.stderr)
         time.sleep(DELAY)
-    print(f"{len(out['names']):,} of {len(order):,} names -> tevu_darzelis_stats.json")
+    print(f"{len(out['names']):,} of {len(order):,} names -> {out_path.name}")
 
 
 def main():
     args = sys.argv[1:]
-    if args[:1] == ["stats"] and len(args) <= 2:
-        return stats(float(args[1]) if len(args) == 2 else 0)
+    if args[:1] == ["stats"]:
+        out_path = ROOT / "tevu_darzelis_stats.json"
+        if "--out" in args:
+            i = args.index("--out")
+            out_path = pathlib.Path(args[i + 1])
+            args = args[:i] + args[i + 2:]
+        if len(args) > 2:
+            sys.exit(__doc__)
+        return stats(float(args[1]) if len(args) == 2 else 0, out_path)
     raw = ROOT / "tevu_darzelis_index.json"
     if args[:1] == ["--index"] and len(args) == 2:
         index = json.loads(pathlib.Path(args[1]).read_text(encoding="utf-8"))
