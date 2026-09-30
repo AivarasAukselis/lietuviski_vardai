@@ -42,6 +42,7 @@ import re
 import sys
 import time
 import unicodedata
+import urllib.parse
 import urllib.request
 
 ROOT = pathlib.Path(__file__).resolve().parent
@@ -136,7 +137,7 @@ def stats(minutes):
     for i, name in enumerate(todo):
         if stop and time.time() > stop:
             break
-        years, births, trend, ranks = page_stats(fetch(f"{BASE}{slug[name]}/"))
+        years, births, trend, ranks = page_stats(fetch(f"{BASE}{urllib.parse.quote(slug[name])}/"))
         if out["years"] is None:
             out["years"] = years
         elif years != out["years"]:
