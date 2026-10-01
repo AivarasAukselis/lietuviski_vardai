@@ -127,9 +127,11 @@ def births():
     if not path.exists():
         return '{"years":[],"fetched":0,"names":{}}'
     raw = json.loads(path.read_text(encoding="utf-8"))
+    td = ROOT / "tevu_darzelis.json"
+    absent = set(json.loads(td.read_text(encoding="utf-8"))["absent"]) if td.exists() else set()
     names = {}
     for name, rec in raw["names"].items():
-        if rec:
+        if rec and name not in absent:
             counts, trend, ranks = rec
             names[name] = [c or 0 for c in counts] + [trend or 0, ranks[len(counts) - 1] or 0]
     out = {"years": raw["years"], "fetched": len(raw["names"]), "names": names}

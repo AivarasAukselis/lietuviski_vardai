@@ -68,7 +68,7 @@ is unchanged: it shows every pick, ignoring filters.
 
 **More about a name.** The ↗ beside a name opens its page on
 [tevu-darzelis.lt](https://www.tevu-darzelis.lt/vaiku-vardai/) — meaning, name
-day and births per year. 5,596 of the register's names have a page there; the
+day and births per year. 5,583 of the register's names have a page there; the
 rest show no ↗. That site addresses names by their accent-free spelling
 (`Rūta` → `/ruta/`), but where spellings collide the numbering (`Ruta` →
 `/ruta1/`, `Adelaide` → `/adelaide-1/`) follows the order the site added them,

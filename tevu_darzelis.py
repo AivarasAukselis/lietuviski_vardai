@@ -100,6 +100,10 @@ def build(index, rows):
             continue
         # A name listed twice is usually one boy's and one girl's entry.
         best = next((s for s, sex in found if sex == gender), found[0][0])
+        if not best.isascii():
+            # The site folds accents out of addresses: /izabėlė/ serves Izabelė's page.
+            absent.append(name)
+            continue
         if best != fold(name):
             slug[name] = best
     return {"fetched": datetime.date.today().isoformat(), "slug": slug, "absent": absent}
