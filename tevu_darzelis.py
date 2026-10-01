@@ -80,7 +80,7 @@ def crawl():
             pages = re.findall(rf"letter={letter}&(?:amp;)?page=(\d+)", text)
             last = max([last, *map(int, pages)])
             for pink, slug, name in ROW.findall(text):
-                index.setdefault(slug, [html.unescape(name).strip(), "f" if pink else "m"])
+                index.setdefault(slug.strip(), [html.unescape(name).strip(), "f" if pink else "m"])
             print(f"{letter} {page}/{last}  {len(index):,} names", file=sys.stderr)
             page += 1
             time.sleep(DELAY)
@@ -90,7 +90,7 @@ def crawl():
 def build(index, rows):
     by_name = collections.defaultdict(list)
     for slug, (name, sex) in index.items():
-        by_name[name].append((slug, sex))
+        by_name[name].append((slug.strip(), sex))  # the index has a stray "jorita "
     slug, absent = {}, []
     for row in rows:
         name, gender = row[0], {1: "f", 2: "m"}.get(row[1])
