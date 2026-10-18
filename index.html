@@ -155,6 +155,7 @@ textarea{width:100%;resize:vertical;font-size:var(--sm);line-height:1.4}
 .fchip .sub{background:none;border:1px solid var(--rule-2);border-radius:var(--r3);
   font-size:11px;padding:0 7px;color:var(--muted);cursor:pointer;white-space:nowrap}
 .fchip .sub[aria-pressed="true"]{background:var(--no);border-color:var(--no);color:var(--card)}
+.fchip.req .sub[aria-pressed="true"]{background:var(--yes);border-color:var(--yes)}
 .fchip.mode{border-left-color:var(--ink);cursor:pointer}
 .clearall{background:none;border:1px solid var(--rule-2);border-radius:var(--r1);
   padding:3px var(--s2);font-size:12.5px;color:var(--muted);cursor:pointer}
@@ -304,9 +305,11 @@ footer{padding:var(--s5) var(--s4) var(--s6);max-width:1220px;margin:0 auto;
       <button data-q="endspec">Exclude diacritics, allow at end</button>
       <button data-q="clear">Clear letter rules</button>
     </div>
-    <p class="hint">Small figures are how many names contain the letter. For any excluded
-      letter you can tick “ok at end”, which keeps it as the final character only — so
-      excluding ė that way passes Eglė but drops Adėlė.</p>
+    <p class="hint">Small figures are how many names contain the letter. Each chosen letter
+      gets <b>start</b>, <b>middle</b> and <b>end</b> toggles above the results. On an excluded
+      letter they mark where it is still allowed — excluding ė but allowing it at the end passes
+      Eglė and drops Adėlė. On a required letter they mark where it must appear — requiring
+      a at the start keeps Agnė and drops Rasa.</p>
   </section>
 
   <section>
@@ -444,7 +447,7 @@ ROWS.forEach(r => {
 const DEF = () => ({smin:1, smax:9, lmin:1, lmax:30, soften:true, mode:'c', q:'',
   genderPicked:null, norm:new Set(), grp:new Set(), saint:false, pogr:new Set(),
   sort:'az', shown:200, view:'all', listMode:'all', pickState:0});
-const S = Object.assign({letters:{}, ends:{}}, DEF());
+const S = Object.assign({letters:{}, pos:{}}, DEF());
 const PICKED = new Set();
 const LISTS = [];            // {id,label,ci,state,names:Set,missing:[{raw,near,cands}]}
 const MEMBER = new Map();    // canonical name -> [index into LISTS]
@@ -643,14 +646,16 @@ function syl(name){
   return sylCache[key] ?? (sylCache[key] = syllables(name, S.soften));
 }
 
-// ---- letters: full alphabet, tri-state, with end-exception rules
+// ---- letters: full alphabet, tri-state, each with optional start/middle/end position rules
 const charCount = {};
 ROWS.forEach(r=>{ new Set(r[0].toLowerCase()).forEach(c=>charCount[c]=(charCount[c]||0)+1); });
 const SPECIAL = ['ą','č','ę','ė','į','š','ų','ū','ž'];
 const ALPHA = ['a','b','c','d','e','f','g','h','i','y','j','k','l','m','n','o','p','r','s','t','u','v','z'];
 const EXTRA = Object.keys(charCount).filter(c=>!SPECIAL.includes(c)&&!ALPHA.includes(c)).sort();
 const LT = [...SPECIAL, ...ALPHA, ...EXTRA];
-LT.forEach(l=>{S.letters[l]=0; S.ends[l]=false;});
+const POS = [['s','start'],['m','middle'],['e','end']];
+const noPos = () => ({s:false, m:false, e:false});
+LT.forEach(l=>{S.letters[l]=0; S.pos[l]=noPos();});
 
 function tile(l){
   const t=document.createElement('div');
@@ -658,7 +663,7 @@ function tile(l){
   if(!charCount[l]) t.dataset.z='1';
   t.setAttribute('aria-label', l+', in '+(charCount[l]||0)+' names');
   t.innerHTML = `<span class="g">${l==='-'?'‑':l}</span><span class="c">${charCount[l]||0}</span>`;
-  const cycle=()=>{ S.letters[l]=(S.letters[l]+1)%3; if(S.letters[l]!==2) S.ends[l]=false; paint(); changed(); };
+  const cycle=()=>{ S.letters[l]=(S.letters[l]+1)%3; S.pos[l]=noPos(); paint(); changed(); };
   t.addEventListener('click',cycle);
   t.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='Enter'){e.preventDefault();cycle();} });
   return t;
@@ -669,8 +674,8 @@ SPECIAL.forEach(l=>$('ltSpecial').appendChild(tile(l)));
 function paint(){ document.querySelectorAll('.tile').forEach(t=>t.dataset.s=S.letters[t.dataset.l]); }
 document.querySelectorAll('.quick button').forEach(b=>b.addEventListener('click',()=>{
   const q=b.dataset.q;
-  if(q==='clear') LT.forEach(l=>{S.letters[l]=0;S.ends[l]=false;});
-  else SPECIAL.forEach(l=>{S.letters[l]=2;S.ends[l]=(q==='endspec');});
+  if(q==='clear') LT.forEach(l=>{S.letters[l]=0;S.pos[l]=noPos();});
+  else SPECIAL.forEach(l=>{S.letters[l]=2;S.pos[l]={...noPos(), e:q==='endspec'};});
   paint(); changed();
 }));
 
@@ -742,7 +747,7 @@ function syncControls(){
 function changed(){ S.shown=200; render(); }
 function resetAll(){
   Object.assign(S, DEF());
-  LT.forEach(l=>{S.letters[l]=0; S.ends[l]=false;});
+  LT.forEach(l=>{S.letters[l]=0; S.pos[l]=noPos();});
   LISTS.forEach(L=>L.state=0);          // keeps the lists themselves, and the picks
   syncControls(); paintLists(); render();
 }
@@ -1032,9 +1037,11 @@ function activeFilters(){
   const f=[];
   LT.filter(l=>S.letters[l]).forEach(l=>{
     const exc=S.letters[l]===2;
-    f.push({tone:exc?'exc':'req', glyph:l==='-'?'‑':l, text:exc?'excluded':'must appear',
-      sub: exc ? {label:'ok at end', on:S.ends[l], toggle(){S.ends[l]=!S.ends[l];}} : null,
-      clear(){S.letters[l]=0;S.ends[l]=false;}});
+    const P=S.pos[l], any=POS.some(([k])=>P[k]);
+    f.push({tone:exc?'exc':'req', glyph:l==='-'?'‑':l,
+      text:exc?(any?'excluded, ok at':'excluded'):(any?'must appear at':'must appear'),
+      subs:POS.map(([k,label])=>({label, on:P[k], toggle(){P[k]=!P[k];}})),
+      clear(){S.letters[l]=0;S.pos[l]=noPos();}});
   });
   if(S.smin!==1||S.smax!==9) f.push({tone:'req', text:`${S.smin}–${S.smax} syllables`,
     clear(){S.smin=1;S.smax=9;}});
@@ -1062,12 +1069,12 @@ function paintActive(){
     c.className='fchip '+f.tone+(f.ci!=null?' c'+f.ci:'');
     if(f.glyph){ const g=document.createElement('span'); g.className='l'; g.textContent=f.glyph; c.appendChild(g); }
     const tx=document.createElement('span'); tx.className='tx'; tx.textContent=f.text; c.appendChild(tx);
-    if(f.sub){
+    (f.subs||[]).forEach(sub=>{
       const s=document.createElement('button');
-      s.className='sub'; s.textContent=f.sub.label; s.setAttribute('aria-pressed',f.sub.on);
-      s.addEventListener('click',()=>{ f.sub.toggle(); changed(); });
+      s.className='sub'; s.textContent=sub.label; s.setAttribute('aria-pressed',sub.on);
+      s.addEventListener('click',()=>{ sub.toggle(); changed(); });
       c.appendChild(s);
-    }
+    });
     const x=document.createElement('button');
     x.className='x'; x.textContent='×'; x.title='Clear this filter';
     x.setAttribute('aria-label','Clear filter: '+f.text);
@@ -1094,17 +1101,28 @@ function paintActive(){
 }
 
 // ---- filtering
+// Does position i of a word with last index `last` fall in one of the ticked positions?
+// A one-letter word's only letter is both its start and its end.
+function atPos(P, i, last){
+  return (P.s && i===0) || (P.e && i===last) || (P.m && i>0 && i<last);
+}
 function letterOk(lower){
+  const last = lower.length-1;
   for(const l of LT){
     const st = S.letters[l];
     if(st===0) continue;
-    const has = lower.includes(l);
-    if(st===1){ if(!has) return false; continue; }
-    if(!has) continue;
-    if(!S.ends[l]) return false;
-    // allowed only as final character: reject if it occurs anywhere else
-    const last = lower.length-1;
-    for(let i=0;i<lower.length;i++) if(lower[i]===l && i!==last) return false;
+    if(!lower.includes(l)){ if(st===1) return false; continue; }
+    const P = S.pos[l];
+    if(!P.s && !P.m && !P.e){ if(st===2) return false; continue; }
+    if(st===1){
+      // required: at least one occurrence must sit in a ticked position
+      let hit=false;
+      for(let i=0;i<=last;i++) if(lower[i]===l && atPos(P,i,last)){ hit=true; break; }
+      if(!hit) return false;
+    } else {
+      // excluded except in the ticked positions: every occurrence must sit in one
+      for(let i=0;i<=last;i++) if(lower[i]===l && !atPos(P,i,last)) return false;
+    }
   }
   return true;
 }
